@@ -8,9 +8,13 @@ import java.rmi.registry.Registry;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.UnicastRemoteObject;
 
-public class Node implements NodeInt {
+public class Node implements NodeInt, Serializable {
     Remote nodeB;
-    public Node() {}
+    private Set<Connection> connections;
+
+    public Node(){
+        connections = new HashSet<>();
+    }
 
     @Override
     public void whoami() throws RemoteException {
@@ -36,5 +40,27 @@ public class Node implements NodeInt {
             System.err.println("\n\nServer exception!\n" + e.getLocalizedMessage());
             e.printStackTrace();
         }
+    }
+
+    public static void saveConnections(Set<Connection> connections, String fileName){
+        try (FileOutputStream fileOut = new FileOutputStream(fileName);
+             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut)) {
+            objectOut.writeObject(connections);
+        } catch (Exception e) {
+            System.out.println("Raised exception while writing connections on file: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+
+    public static Set<Connection> readConnections(String fileName) {
+        Set<Connection> connections = null;
+        try (FileInputStream fileOut = new FileInputStream(fileName);
+             ObjectInputStream objectOut = new ObjectInputStream(fileOut)) {
+            connections = (Set<Connection>) objectOut.readObject();
+        } catch (Exception e) {
+            System.out.println("Raised exception while reading connections from file: " + e.toString());
+            e.printStackTrace();
+        }
+        return connections;
     }
 }
