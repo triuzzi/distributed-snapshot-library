@@ -1,0 +1,9 @@
+<component name="libraryTable">
+  <library name="SnapLib">
+    <CLASSES>
+      <root url="jar://$PROJECT_DIR$/../SnapLib/out/artifacts/SnapLib/SnapLib.jar!/" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+  </library>
+</component>
