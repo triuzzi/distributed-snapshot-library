@@ -1,17 +1,19 @@
+package it.polimi.ds.ricciosorrentinotriuzzi.snaplib;
+
 import java.io.*;
 import java.util.LinkedList;
 import java.util.List;
 
-public class Snapshot implements Serializable {
+public class Snapshot<T extends Serializable> implements Serializable {
     private final String id;
-    private List<Message> messages;
+    private List<T> messages;
 
     public Snapshot(String id) {
         this.id = id;
         messages = new LinkedList<>();
     }
 
-    public List<Message> addMessage(Message message){
+    public List<T> addMessage(T message){
         messages.add(message);
         return messages;
     }
@@ -20,7 +22,7 @@ public class Snapshot implements Serializable {
         return id;
     }
 
-    public List<Message> getMessages() {
+    public List<T> getMessages() {
         return messages;
     }
 

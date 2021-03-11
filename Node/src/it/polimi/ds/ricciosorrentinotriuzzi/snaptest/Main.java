@@ -1,12 +1,19 @@
+package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
+
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
+
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.nio.file.Paths;
+
 public class Main {
     public static void main(String[] args) throws NoSuchMethodException, InvocationTargetException, IllegalAccessException, InstantiationException{
-        Snapshot snapshot = new Snapshot("id");
+
+        Snapshot<Message> snapshot = new Snapshot("id");
         Message message1 = new Message("metodo", new Class<?>[] {String.class}, new String[]{"stringaDiProva"});
         snapshot.addMessage(message1);
-        Snapshot.saveSnapshot(snapshot, "/Users/gian/Desktop/snapshot.snap");
-        snapshot = Snapshot.readSnapshot("/Users/gian/Desktop/snapshot.snap");
+        Snapshot.saveSnapshot(snapshot, "snapshot.snap");
+        snapshot = Snapshot.readSnapshot("snapshot.snap");
 
         for (Message message : snapshot.getMessages()) {
             Method method = Main.class.getMethod(message.getMethodName(), message.getParameterTypes());
