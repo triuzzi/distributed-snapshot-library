@@ -1,5 +1,5 @@
 **/.DS_Store
-Distributed-Snapshot-Library/SnapLib/out/production
-Distributed-Snapshot-Library/Node/out
-Distributed-Snapshot-Library/Node/*.cts
-Distributed-Snapshot-Library/Node/*.snap
+SnapLib/out/production/
+Node/out/
+**/*.cts
+**/*.snap
