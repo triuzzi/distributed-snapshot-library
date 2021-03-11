@@ -1,15 +1,15 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
-
-import java.rmi.Remote;
-import java.rmi.RemoteException;
-import java.rmi.registry.Registry;
-import java.rmi.registry.LocateRegistry;
-import java.rmi.server.UnicastRemoteObject;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.rmi.*;
+import java.rmi.server.RemoteServer;
+import java.rmi.server.ServerNotActiveException;
+import java.util.*;
 
 public class Node implements NodeInt, Serializable {
-    Remote nodeB;
+    NodeInt nodeB; //CAMBIA CON INTERF NODO B
     private Set<Connection> connections;
 
     public Node(){
@@ -18,33 +18,27 @@ public class Node implements NodeInt, Serializable {
 
     @Override
     public void whoami() throws RemoteException {
-        System.out.println("I am node A");
-    }
-
-    public static void main(String[] args) {
         try {
-            System.out.println("Starting server...");
-            Node self = new Node();
-            NodeInt stub = (NodeInt) UnicastRemoteObject.exportObject(self, 33330);
-            Registry registry = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
-            registry.bind("NodeInt", stub);
-            System.out.println("Server ready");
-
-            System.out.println("Connecting to B...");
-            self.nodeB = (Remote) LocateRegistry //SOSTITUISCI CON REMOTE
-                        .getRegistry("192.168.1.8",Registry.REGISTRY_PORT)
-                        .lookup("IntTest");
-            System.out.println("Connection to B established");
-
-        } catch (Exception e) {
-            System.err.println("\n\nServer exception!\n" + e.getLocalizedMessage());
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            System.out.println("I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress());
+        } catch (UnknownHostException e) {
             e.printStackTrace();
         }
     }
 
-    public static void saveConnections(Set<Connection> connections, String fileName){
-        try (FileOutputStream fileOut = new FileOutputStream(fileName);
-             ObjectOutputStream objectOut = new ObjectOutputStream(fileOut)) {
+    @Override
+    public void printStr(String toPrint) throws RemoteException {
+        try {
+            System.out.println("printStr invoked from "+ RemoteServer.getClientHost());
+        } catch (ServerNotActiveException e) {
+            System.out.println("printStr autoinvoked");
+        }
+        System.out.println(toPrint);
+    }
+
+
+    public void saveConnections(Set<Connection> connections, String fileName) {
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(fileName))) {
             objectOut.writeObject(connections);
         } catch (Exception e) {
             System.out.println("Raised exception while writing connections on file: " + e.toString());
@@ -52,10 +46,9 @@ public class Node implements NodeInt, Serializable {
         }
     }
 
-    public static Set<Connection> readConnections(String fileName) {
+    public Set<Connection> readConnections(String fileName) {
         Set<Connection> connections = null;
-        try (FileInputStream fileOut = new FileInputStream(fileName);
-             ObjectInputStream objectOut = new ObjectInputStream(fileOut)) {
+        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(fileName))) {
             connections = (Set<Connection>) objectOut.readObject();
         } catch (Exception e) {
             System.out.println("Raised exception while reading connections from file: " + e.toString());

@@ -1,2 +1,5 @@
 **/.DS_Store
-/Users/vi/Documents/GitHub/Distributed-Snapshot-Library/SnapLib/out/production
+Distributed-Snapshot-Library/SnapLib/out/production
+Distributed-Snapshot-Library/Node/out
+Distributed-Snapshot-Library/Node/*.cts
+Distributed-Snapshot-Library/Node/*.snap

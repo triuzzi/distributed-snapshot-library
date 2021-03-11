@@ -9,7 +9,7 @@ import java.rmi.server.ServerNotActiveException;
 
 
 public interface SnapInt extends Remote {
-    void configure(@NotNull Registry r) throws RemoteException, ServerNotActiveException;
     void printMsg() throws RemoteException, ServerNotActiveException;
-
+    void saveSnapshot(Snapshot snap) throws SnapEx;
+    Snapshot readSnapshot(String id) throws SnapEx;
 }

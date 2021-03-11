@@ -1,3 +1,5 @@
+package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
+
 import java.io.Serializable;
 
 public class Connection implements Serializable {
