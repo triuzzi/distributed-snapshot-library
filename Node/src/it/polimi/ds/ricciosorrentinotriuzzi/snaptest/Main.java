@@ -10,6 +10,17 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class Main {
+    public static void main2(String[] args) throws Exception {
+        System.out.println("\nConnecting to B...");
+        NodeInt remint = (NodeInt) LocateRegistry
+                .getRegistry("93.148.117.106",44444)
+                .lookup("NodeInt");
+        System.out.println("Connection to B established");
+        System.out.println("Call to B's whoami method");
+        remint.whoami();
+        System.out.println("\n");
+    }
+
     public static void main(String[] args) throws Exception {
         System.out.println("\nStarting server...");
         Node self = new Node();
@@ -18,17 +29,22 @@ public class Main {
         registry.bind("NodeInt", stub);
         System.out.println("Server ready\n");
 
+
         SnapLib snaplib = new SnapLib(registry);
 
 
+        /*
         // TEST CONNESSIONE A SE STESSO
         System.out.println("\nConnecting to B...");
         self.nodeB = (NodeInt) LocateRegistry
-                .getRegistry("localhost",Registry.REGISTRY_PORT)
+                .getRegistry("192.168.1.100",Registry.REGISTRY_PORT)
                 .lookup("NodeInt");
         System.out.println("Connection to B established");
-        System.out.println("Call to B's whoami method\n");
+        System.out.println("Call to B's whoami method");
         self.nodeB.whoami();
+        System.out.println("\n");
+
+         */
 
 
         // MINI TEST SNAPSHOT
@@ -50,5 +66,7 @@ public class Main {
         self.saveConnections(connections, "connections.cts");
         Set<Connection> connections2 = self.readConnections("connections.cts");
         System.out.println(connections2.toString());
+
+
     }
 }
