@@ -24,8 +24,10 @@ public class Connection implements Serializable {
     public String getName() {
         return name;
     }
+}
 
-    public void setHost(String host) {
+/*
+public void setHost(String host) {
         this.host = host;
     }
 
@@ -65,4 +67,4 @@ public class Connection implements Serializable {
         result = 31 * result + (name != null ? name.hashCode() : 0);
         return result;
     }
-}
+ */

@@ -12,7 +12,7 @@ public class Node implements NodeInt, Serializable {
     NodeInt nodeB; //CAMBIA CON INTERF NODO B
     private Set<Connection> connections;
 
-    public Node(){
+    public Node() {
         connections = new HashSet<>();
     }
 
