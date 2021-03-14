@@ -4,8 +4,10 @@ import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.SnapLib;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
 
 import java.lang.reflect.Method;
+import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
+import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
@@ -17,8 +19,8 @@ public class Main {
             //java -Djava.rmi.server.hostname="192.168.1.100" -jar Node.jar
             System.out.println("\nStarting server...");
             Node self = new Node();
-            Registry registry = LocateRegistry.createRegistry(1099);
             NodeInt stub = (NodeInt) UnicastRemoteObject.exportObject(self, 1099);
+            Registry registry = LocateRegistry.createRegistry(1099);
             registry.bind("NodeInt", stub);
             //Naming.bind("rmi://localhost:1099/NodeInt",stub);
             System.out.println("Server ready\n");
@@ -26,15 +28,21 @@ public class Main {
 
             SnapLib snaplib = new SnapLib(registry, self.getInConn(), self.getOutConn(), self);
 
-            // TEST CONNESSIONE A SE STESSO
-            System.out.println("\nConnecting to myself...");
-            self.nodeB = (NodeInt) LocateRegistry
-                    .getRegistry("localhost", Registry.REGISTRY_PORT)
-                    .lookup("NodeInt");
-            System.out.println("Connection to myself established");
-            System.out.println("Call to myself's whoami method");
-            self.nodeB.whoami();
-            System.out.println("\n");
+            Thread.sleep(10000);
+
+
+            // TEST CONNESSIONE AI NODI OUTGOING
+            for (Connection c : self.getOutConn()) {
+                System.out.println("\nConnecting to "+c.getName()+"...");
+                self.nodeB = (NodeInt) LocateRegistry
+                        .getRegistry(c.getHost(), c.getPort())
+                        .lookup("NodeInt");
+                System.out.println("Connection to "+c.getName()+" established");
+                System.out.println("Call to "+c.getName()+"'s whoami method");
+                self.nodeB.whoami();
+                System.out.println("\n");
+            }
+
 
 
             // MINI TEST SNAPSHOT
@@ -54,6 +62,8 @@ public class Main {
             self.addConnection(c1);
             self.saveConnections("connections.cts");
             self.readConnections("connections.cts");
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }

@@ -8,11 +8,11 @@ public class Connection implements Serializable {
     private Integer port;
     private String name;
 
-    public Connection(String inHostname) {
+    public Connection(String inHostname, String name) {
         this.outgoing = false;
         this.host = inHostname;
         this.port = null;
-        this.name = null;
+        this.name = name;
     }
 
     public Connection(String outHostname, Integer port, String name) {

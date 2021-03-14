@@ -18,15 +18,17 @@ public class Node implements NodeInt, Serializable {
     private Set<Connection> inConn;
     private Set<Connection> outConn;
 
+
     public Node() throws ConfigurationException {
         inConn = new HashSet<>();
         outConn = new HashSet<>();
         XMLConfiguration config = new XMLConfiguration("config.xml");
         name = config.getString("myself.name");
         host = config.getString("myself.host");
+        System.setProperty("java.rmi.server.hostname",host);
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
-            inConn.add(new Connection(hc.getString("host")));
+            inConn.add(new Connection(hc.getString("host"),hc.getString("name")));
         }
         List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
@@ -58,6 +60,12 @@ public class Node implements NodeInt, Serializable {
     public void whoami() throws RemoteException {
         try {
             InetAddress inetAddress = InetAddress.getLocalHost();
+            System.out.println(
+                    "\nWhoami\nAccording to InetAddress:\n"+
+                    "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
+                    "\nAccording to my config:\n"+
+                    "I am node "+name+" with IP "+host
+            );
             System.out.println("I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
