@@ -10,10 +10,12 @@ import java.util.*;
 
 public class Node implements NodeInt, Serializable {
     NodeInt nodeB; //CAMBIA CON INTERF NODO B
-    private Set<Connection> connections;
+    private Set<Connection> inConnections;
+    private Set<Connection> outConnections;
 
     public Node() {
-        connections = new HashSet<>();
+        inConnections = new HashSet<>();
+        outConnections = new HashSet<>();
     }
 
     @Override
@@ -37,23 +39,31 @@ public class Node implements NodeInt, Serializable {
     }
 
 
-    public void saveConnections(Set<Connection> connections, String fileName) {
+    public void saveConnections(String fileName) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(fileName))) {
-            objectOut.writeObject(connections);
+            objectOut.writeObject(inConnections);
+            objectOut.writeObject(outConnections);
         } catch (Exception e) {
             System.out.println("Raised exception while writing connections on file: " + e.toString());
             e.printStackTrace();
         }
     }
 
-    public Set<Connection> readConnections(String fileName) {
-        Set<Connection> connections = null;
+    public void addConnection(Connection c){
+        if (c.isOutgoing()) {
+            outConnections.add(c);
+        } else {
+            inConnections.add(c);
+        }
+    }
+
+    public void readConnections(String fileName) {
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(fileName))) {
-            connections = (Set<Connection>) objectOut.readObject();
+            inConnections = (Set<Connection>) objectOut.readObject();
+            outConnections = (Set<Connection>) objectOut.readObject();
         } catch (Exception e) {
             System.out.println("Raised exception while reading connections from file: " + e.toString());
             e.printStackTrace();
         }
-        return connections;
     }
 }
