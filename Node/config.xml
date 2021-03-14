@@ -1,0 +1,24 @@
+<config>
+    <myself>
+        <address>192.168.1.8</address>
+        <name>MBA.local</name>
+    </myself>
+    <outgoing>
+        <conn>
+            <address>192.168.1.100</address>
+            <port>1099</port>
+            <name>rpi</name>
+        </conn>
+        <conn>
+            <address>192.168.1.101</address>
+            <port>1099</port>
+            <name>boh</name>
+        </conn>
+    </outgoing>
+    <incoming>
+        <conn>
+            <address>127.0.0.1</address>
+            <name>lo</name>
+        </conn>
+    </incoming>
+</config>
