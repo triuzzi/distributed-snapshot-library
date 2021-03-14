@@ -65,6 +65,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 if (incomingStatus.get(id).isEmpty()) {
                     saveSnapshot(snaps.get(id));
                     incomingStatus.remove(id);
+                    System.out.println("Lo snapshot " + id + "è terminato");
                 }
             } else {
                 clock = Math.max(Double.parseDouble(id.split("\\.")[0]) + 1, clock);
