@@ -6,7 +6,10 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.*;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
@@ -50,42 +53,42 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void startSnapshot(String id) throws SnapEx {
-        //TODO update clock
-        if (incomingStatus.containsKey(id)){
-            try {
-                incomingStatus.get(id).remove(RemoteServer.getClientHost());
-            } catch (ServerNotActiveException e) {
-                e.printStackTrace();
-                throw new SnapEx();
-            }
-            //Se lo snapshot è finito
-            if (incomingStatus.get(id).isEmpty()){
-                saveSnapshot(snaps.get(id));
-                incomingStatus.remove(id);
-            }
-        }
-        else{
-            clock = Math.max( Double.parseDouble(id.split("\\.")[0]) + 1, clock);
-            Snapshot<S,M> newSnapshot = new Snapshot<>(id,saveState(node, id));
-            System.out.println("Non sono lo stesso, vero? : " + node == saveState(node, id));
-            snaps.put(id, newSnapshot);
-            //Inizializzo la mappa di connessioni in ingresso per questo snapshot
-            Set<String> incoming = new HashSet<>();
-            for (Connection connection : incomingConnections){
-                incoming.add(connection.getHost());
-            }
-            incomingStatus.put(id, incoming);
-
-            //Avvia gli snap degli outgoing
-            try {
-                for (Connection connection : outgoingConnections){
-                    ((SnapInt<S, M>) LocateRegistry
-                            .getRegistry(connection.getHost(),connection.getPort())
-                            .lookup("SnapInt")).startSnapshot(id);
+        synchronized (node) {
+            if (incomingStatus.containsKey(id)) {
+                try {
+                    incomingStatus.get(id).remove(RemoteServer.getClientHost());
+                } catch (ServerNotActiveException e) {
+                    e.printStackTrace();
+                    throw new SnapEx();
                 }
-            } catch (NotBoundException | RemoteException e) {
-                e.printStackTrace();
-                throw new SnapEx();
+                //Se lo snapshot è finito
+                if (incomingStatus.get(id).isEmpty()) {
+                    saveSnapshot(snaps.get(id));
+                    incomingStatus.remove(id);
+                }
+            } else {
+                clock = Math.max(Double.parseDouble(id.split("\\.")[0]) + 1, clock);
+                Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node, id));
+                System.out.println("Non sono lo stesso, vero? : " + node == saveState(node, id));
+                snaps.put(id, newSnapshot);
+                //Inizializzo la mappa di connessioni in ingresso per questo snapshot
+                Set<String> incoming = new HashSet<>();
+                for (Connection connection : incomingConnections) {
+                    incoming.add(connection.getHost());
+                }
+                incomingStatus.put(id, incoming);
+
+                //Avvia gli snap degli outgoing
+                try {
+                    for (Connection connection : outgoingConnections) {
+                        ((SnapInt<S, M>) LocateRegistry
+                                .getRegistry(connection.getHost(), connection.getPort())
+                                .lookup("SnapInt")).startSnapshot(id);
+                    }
+                } catch (NotBoundException | RemoteException e) {
+                    e.printStackTrace();
+                    throw new SnapEx();
+                }
             }
         }
     }

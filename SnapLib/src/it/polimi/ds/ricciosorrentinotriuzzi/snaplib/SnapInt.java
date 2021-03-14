@@ -3,6 +3,7 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaplib;
 import java.io.Serializable;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
+import java.rmi.registry.Registry;
 import java.rmi.server.ServerNotActiveException;
 
 
