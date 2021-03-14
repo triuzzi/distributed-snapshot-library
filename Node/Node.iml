@@ -8,5 +8,8 @@
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
     <orderEntry type="library" name="SnapLib" level="project" />
+    <orderEntry type="library" name="SnapLib1" level="project" />
+    <orderEntry type="library" name="Node" level="project" />
+    <orderEntry type="module" module-name="SnapLib" />
   </component>
 </module>
