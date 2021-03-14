@@ -57,13 +57,9 @@ public class Main {
 
 
         // MINI TEST CONNECTIONS
-        Connection c1 = new Connection("testHost", 3306, "IntTest");
-        Set<Connection> connections = new HashSet<>();
-        connections.add(c1);
-        self.saveConnections(connections, "connections.cts");
-        Set<Connection> connections2 = self.readConnections("connections.cts");
-        System.out.println(connections2.toString());
-
-
+        Connection c1 = new Connection(true, "testHost", 3306, "IntTest");
+        self.addConnection(c1);
+        self.saveConnections("connections.cts");
+        self.readConnections("connections.cts");
     }
 }
