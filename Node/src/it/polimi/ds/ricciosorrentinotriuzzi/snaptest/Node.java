@@ -59,6 +59,11 @@ public class Node implements NodeInt, Serializable {
     @Override
     public void whoami() throws RemoteException {
         try {
+            try {
+                System.out.println("whoami invoked from " + RemoteServer.getClientHost());
+            } catch (ServerNotActiveException e) {
+                System.out.println("whoami invoked from local");
+            }
             InetAddress inetAddress = InetAddress.getLocalHost();
             System.out.println(
                     "\nWhoami\nAccording to InetAddress:\n"+
