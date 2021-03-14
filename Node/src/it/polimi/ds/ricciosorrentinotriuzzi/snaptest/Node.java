@@ -66,7 +66,6 @@ public class Node implements NodeInt, Serializable {
                     "\nAccording to my config:\n"+
                     "I am node "+name+" with IP "+host
             );
-            System.out.println("I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
