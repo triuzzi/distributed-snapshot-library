@@ -3,3 +3,4 @@ SnapLib/out/production/
 Node/out/production/
 **/*.cts
 **/*.snap
+**/config.xml
