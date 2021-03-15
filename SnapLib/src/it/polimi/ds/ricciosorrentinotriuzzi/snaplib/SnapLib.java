@@ -7,6 +7,8 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.*;
 import java.util.*;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
@@ -134,6 +136,15 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     @Override
     public void printMsg() throws ServerNotActiveException {
         System.out.println("printMsg invoked from "+RemoteServer.getClientHost());
+    }
+
+    public Snapshot<S, M> restoreLast() throws SnapEx {
+        File snapshots = new File(System.getProperty("user.dir"));
+        List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(iml))$)")).collect(Collectors.toList());
+        //snapnames.sort(String::compareTo);
+        // System.out.println(snapnames.get(snapnames.size()-1));
+        System.out.println(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
+        return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
     }
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
