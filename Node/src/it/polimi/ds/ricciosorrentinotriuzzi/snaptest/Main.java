@@ -4,19 +4,16 @@ import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.SnapLib;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
 
 import java.lang.reflect.Method;
-import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
-import java.rmi.server.RemoteServer;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
 
 public class Main {
     public static void main(String[] args) {
         try {
-            //System.setProperty("java.rmi.server.hostname","192.168.1.100");
+            //System.setProperty("java.rmi.server.hostname","PUBLIC_IP");
             //OPPURE
-            //java -Djava.rmi.server.hostname="192.168.1.100" -jar Node.jar
+            //java -Djava.rmi.server.hostname="PUBLIC_IP" -jar Node.jar
             System.out.println("\nStarting server...");
             Node self = new Node();
             NodeInt stub = (NodeInt) UnicastRemoteObject.exportObject(self, 1099);
@@ -26,7 +23,7 @@ public class Main {
             System.out.println("Server ready\n");
 
 
-            SnapLib snaplib = new SnapLib(registry, self.getInConn(), self.getOutConn(), self);
+            SnapLib<Node,Message> snaplib = new SnapLib(registry, self.getInConn(), self.getOutConn(), self);
 
             Thread.sleep(10000);
 
@@ -40,7 +37,7 @@ public class Main {
                 System.out.println("Connection to "+c.getName()+" established");
                 System.out.println("Call to "+c.getName()+"'s whoami method");
                 self.nodeB.whoami();
-                System.out.println("\n");
+                System.out.println("Whoami of "+c.getName()+" called\n");
             }
 
 

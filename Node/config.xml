@@ -1,24 +1,31 @@
 <config>
     <myself>
-        <address>192.168.1.8</address>
+        <host>93.148.117.106</host>
+        <port>1099</port>
         <name>MBA.local</name>
     </myself>
     <outgoing>
         <conn>
-            <address>192.168.1.100</address>
+            <host>93.71.52.139</host>
             <port>1099</port>
-            <name>rpi</name>
+            <name>GianOut</name>
         </conn>
         <conn>
-            <address>192.168.1.101</address>
+            <host>151.75.54.217</host>
             <port>1099</port>
-            <name>boh</name>
+            <name>LeleOut</name>
         </conn>
     </outgoing>
     <incoming>
         <conn>
-            <address>127.0.0.1</address>
-            <name>lo</name>
+            <host>93.71.52.139</host>
+            <port>1099</port>
+            <name>GianOut</name>
+        </conn>
+        <conn>
+            <host>151.75.54.217</host>
+            <port>1099</port>
+            <name>LeleOut</name>
         </conn>
     </incoming>
 </config>

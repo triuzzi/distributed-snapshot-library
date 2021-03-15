@@ -1,8 +1,10 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnectionInt;
+
 import java.io.Serializable;
 
-public class Connection implements Serializable {
+public class Connection implements Serializable, ConnectionInt {
     private boolean outgoing;
     private String host;
     private Integer port;

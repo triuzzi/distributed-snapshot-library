@@ -6,21 +6,18 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.*;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
-    private Set<Connection> incomingConnections;
-    private Set<Connection> outgoingConnections;
-    private Map<String, Set<String>> incomingStatus; //map(idSnap, set(inHost) se è presente, vuol dire che non ho ancora ricevuto il marker)
+    private Set<ConnectionInt> incomingConnections;
+    private Set<ConnectionInt> outgoingConnections;
+    private Map<String, Set<String>> incomingStatus; //map(idSnap, set(inHost)) se è presente, vuol dire che non ho ancora ricevuto il marker)
     private Map<String, Snapshot<S, M>> snaps; //map(idSnap, Snap)
-    private S node;
+    private final S node;
     private Double clock;
 
-    public SnapLib(Registry r, Set<Connection> incomingConnections, Set<Connection> outgoingConnections, S node) throws Exception {
+    public SnapLib(Registry r, Set<ConnectionInt> incomingConnections, Set<ConnectionInt> outgoingConnections, S node) throws Exception {
         r.bind("SnapInt",this);
         System.out.println("SnapLib configured");
         incomingStatus = new HashMap<>();
@@ -74,14 +71,14 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> incoming = new HashSet<>();
-                for (Connection connection : incomingConnections) {
+                for (ConnectionInt connection : incomingConnections) {
                     incoming.add(connection.getHost());
                 }
                 incomingStatus.put(id, incoming);
 
                 //Avvia gli snap degli outgoing
                 try {
-                    for (Connection connection : outgoingConnections) {
+                    for (ConnectionInt connection : outgoingConnections) {
                         ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt")).startSnapshot(id);
@@ -95,14 +92,14 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
-    public void addMessage(String hostname, M message){
+    public void addMessage(String hostname, M message) {
         for (Snapshot<S, M> snapshot : snaps.values()){
             if (incomingStatus.get(snapshot.getId()).contains(hostname))
                 snapshot.addMessage(message);
         }
     }
 
-    private void serializeState(S state, String snapshotID)throws SnapEx {
+    private void serializeState(S state, String snapshotID) throws SnapEx {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snapshotID+".state"))) {
             objectOut.writeObject(state);
             System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
@@ -122,7 +119,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         }
     }
 
-    private S saveState(S state, String snapshotID) throws SnapEx{
+    private S saveState(S state, String snapshotID) throws SnapEx {
         serializeState(state, snapshotID);
         return readState(snapshotID);
     }

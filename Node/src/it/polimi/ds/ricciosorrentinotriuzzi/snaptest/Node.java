@@ -1,6 +1,7 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnectionInt;
 import org.apache.commons.configuration.*;
 
 import java.io.*;
@@ -11,10 +12,12 @@ import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
-public class Node implements NodeInt, Serializable {
+public class Node implements ConnectionInt, NodeInt, Serializable {
     NodeInt nodeB; //CAMBIA CON INTERF NODO B
-    private String name;
     private String host;
+    private int port;
+    private String name;
+
     private Set<Connection> inConn;
     private Set<Connection> outConn;
 
@@ -23,8 +26,9 @@ public class Node implements NodeInt, Serializable {
         inConn = new HashSet<>();
         outConn = new HashSet<>();
         XMLConfiguration config = new XMLConfiguration("config.xml");
-        name = config.getString("myself.name");
         host = config.getString("myself.host");
+        port = config.getInt("myself.port");
+        name = config.getString("myself.name");
         System.setProperty("java.rmi.server.hostname",host);
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
@@ -40,12 +44,16 @@ public class Node implements NodeInt, Serializable {
         return nodeB;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public String getHost() {
         return host;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public String getName() {
+        return name;
     }
 
     public Set<Connection> getInConn() {

@@ -1,0 +1,8 @@
+<component name="ArtifactManager">
+  <artifact type="jar" name="SnapLibXNode">
+    <output-path>$PROJECT_DIR$/../Node/lib</output-path>
+    <root id="archive" name="SnapLib.jar">
+      <element id="module-output" name="SnapLib" />
+    </root>
+  </artifact>
+</component>
