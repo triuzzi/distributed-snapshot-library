@@ -13,4 +13,5 @@ public interface SnapInt<S extends Serializable, M extends Serializable> extends
     Snapshot<S, M> readSnapshot(String id) throws SnapEx;
     void startSnapshot(String id) throws SnapEx;
     void initiateSnapshot(String id) throws SnapEx;
+    void restore() throws SnapEx;
 }

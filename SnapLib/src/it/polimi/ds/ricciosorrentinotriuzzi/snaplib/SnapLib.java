@@ -7,26 +7,29 @@ import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.*;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
-    private Set<ConnectionInt> incomingConnections;
-    private Set<ConnectionInt> outgoingConnections;
+    private Set<NodeInt> incomingConnections;
+    private Set<NodeInt> outgoingConnections;
     private Map<String, Set<String>> incomingStatus; //map(idSnap, set(inHost)) se è presente, vuol dire che non ho ancora ricevuto il marker)
     private Map<String, Snapshot<S, M>> snaps; //map(idSnap, Snap)
-    private final S node;
-    private Double clock;
+    private boolean restoring;
+    private final Snapshottable<S,M> node;
+    private long clock;
+    private Set<String> pendingRestores;
 
-    public SnapLib(Registry r, Set<ConnectionInt> incomingConnections, Set<ConnectionInt> outgoingConnections, S node) throws Exception {
+    public SnapLib(Registry r, Set<NodeInt> incomingConnections, Set<NodeInt> outgoingConnections, Snapshottable<S,M> node) throws Exception {
         r.bind("SnapInt",this);
         System.out.println("SnapLib configured");
         incomingStatus = new HashMap<>();
         snaps = new HashMap<>();
-        clock = 0D;
+        clock = 0L;
+        restoring = false;
         this.incomingConnections = incomingConnections;
         this.outgoingConnections = outgoingConnections;
+        this.pendingRestores = incomingInit();
         this.node = node;
     }
 
@@ -67,20 +70,20 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     System.out.println("Lo snapshot " + id + "è terminato");
                 }
             } else {
-                clock = Math.max(Double.parseDouble(id.split("\\.")[0]) + 1, clock);
-                Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node, id));
-                System.out.println("Non sono lo stesso, vero? : " + node == saveState(node, id));
+                clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
+                Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
+                System.out.println("Non sono lo stesso, vero? : " + node == saveState(node.getState(), id));
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> incoming = new HashSet<>();
-                for (ConnectionInt connection : incomingConnections) {
+                for (NodeInt connection : incomingConnections) {
                     incoming.add(connection.getHost());
                 }
                 incomingStatus.put(id, incoming);
 
                 //Avvia gli snap degli outgoing
                 try {
-                    for (ConnectionInt connection : outgoingConnections) {
+                    for (NodeInt connection : outgoingConnections) {
                         ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt")).startSnapshot(id);
@@ -129,7 +132,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     @Override
     public void initiateSnapshot(String ip) throws SnapEx {
         //TODO genera id lamp clock
-        String id = String.valueOf(clock).split("\\.")[0]+"."+ip/* + ip della macchina*/;
+        String id = clock+"."+ip/* + ip della macchina*/;
         startSnapshot(id);
     }
 
@@ -148,4 +151,42 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     }
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
+
+    public void restore() throws SnapEx {
+        synchronized (node) {
+            try {
+                if (!pendingRestores.contains(RemoteServer.getClientHost()) && restoring) {
+                    restoring = false;
+                    pendingRestores = incomingInit();
+                }
+                pendingRestores.remove(RemoteServer.getClientHost());
+                if (!restoring) {
+                    node.restoreSnapshot(restoreLast());
+                    restoring = true;
+                    //chiama il restore degli altri sulla current epoch
+                    for (NodeInt connection : outgoingConnections) {
+                        ((SnapInt<S, M>) LocateRegistry
+                                .getRegistry(connection.getHost(), connection.getPort())
+                                .lookup("SnapInt")).restore();//TODO CAMBIA NODE INT
+                    }
+                }
+                if (pendingRestores.isEmpty()) {
+                    restoring = false;
+                    pendingRestores = incomingInit();
+                }
+            }
+            catch (Exception e) {
+                throw new SnapEx();
+            }
+        }
+    }
+
+    public boolean isRestoring(){return restoring;}
+
+    private Set<String> incomingInit(){
+        Set<String> toRet = new HashSet<>();
+        for (NodeInt c : incomingConnections)
+            toRet.add(c.getHost());
+        return toRet;
+    }
 }
