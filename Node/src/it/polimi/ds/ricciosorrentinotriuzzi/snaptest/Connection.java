@@ -1,10 +1,11 @@
+/*
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnectionInt;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.NodeInt;
 
 import java.io.Serializable;
 
-public class Connection implements Serializable, ConnectionInt {
+public class Connection implements Serializable, NodeInt {
     private boolean outgoing;
     private String host;
     private Integer port;
@@ -70,4 +71,8 @@ public class Connection implements Serializable, ConnectionInt {
         result = 31 * result + (name != null ? name.hashCode() : 0);
         return result;
     }
+
+
 }
+
+ */

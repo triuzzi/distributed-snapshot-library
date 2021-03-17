@@ -11,16 +11,16 @@ import java.util.stream.Collectors;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
-    private Set<NodeInt> incomingConnections;
-    private Set<NodeInt> outgoingConnections;
+    private Set<Node> incomingConnections;
+    private Set<Node> outgoingConnections;
     private Map<String, Set<String>> incomingStatus; //map(idSnap, set(inHost)) se è presente, vuol dire che non ho ancora ricevuto il marker)
     private Map<String, Snapshot<S, M>> snaps; //map(idSnap, Snap)
     private boolean restoring;
-    private final Snapshottable<S,M> node;
+    private final Node<S,M> node;
     private long clock;
     private Set<String> pendingRestores;
 
-    public SnapLib(Registry r, Set<NodeInt> incomingConnections, Set<NodeInt> outgoingConnections, Snapshottable<S,M> node) throws Exception {
+    public SnapLib(Registry r, Set<Node> incomingConnections, Set<Node> outgoingConnections, Node<S,M> node) throws Exception {
         r.bind("SnapInt",this);
         System.out.println("SnapLib configured");
         incomingStatus = new HashMap<>();
@@ -76,14 +76,14 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> incoming = new HashSet<>();
-                for (NodeInt connection : incomingConnections) {
+                for (Node connection : incomingConnections) {
                     incoming.add(connection.getHost());
                 }
                 incomingStatus.put(id, incoming);
 
                 //Avvia gli snap degli outgoing
                 try {
-                    for (NodeInt connection : outgoingConnections) {
+                    for (Node connection : outgoingConnections) {
                         ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt")).startSnapshot(id);
@@ -164,7 +164,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     node.restoreSnapshot(restoreLast());
                     restoring = true;
                     //chiama il restore degli altri sulla current epoch
-                    for (NodeInt connection : outgoingConnections) {
+                    for (Node connection : outgoingConnections) {
                         ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt")).restore();//TODO CAMBIA NODE INT
@@ -185,7 +185,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     private Set<String> incomingInit(){
         Set<String> toRet = new HashSet<>();
-        for (NodeInt c : incomingConnections)
+        for (Node c : incomingConnections)
             toRet.add(c.getHost());
         return toRet;
     }

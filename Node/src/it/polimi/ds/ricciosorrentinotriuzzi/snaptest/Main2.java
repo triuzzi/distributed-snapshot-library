@@ -1,13 +1,11 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import java.rmi.Naming;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 
 public class Main2 {
     public static void main(String[] args) throws Exception {
         System.out.println("\nConnecting to B...");
-        NodeInt remint = (NodeInt) LocateRegistry.getRegistry("93.148.117.106",1099).lookup("NodeInt");
+        PublicInt remint = (PublicInt) LocateRegistry.getRegistry("93.148.117.106",1099).lookup("NodeInt");
         /*
         System.out.println("Il registro remoto ha queste interfacce");
         for (String s: r.list())

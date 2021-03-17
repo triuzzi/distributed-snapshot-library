@@ -1,67 +1,71 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnectionInt;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.*;
 
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.rmi.*;
+import java.rmi.RemoteException;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
-public class Node implements ConnectionInt, NodeInt, Serializable {
-    NodeInt nodeB; //CAMBIA CON INTERF NODO B
-    private String host;
-    private int port;
-    private String name;
-
-    private Set<Connection> inConn;
-    private Set<Connection> outConn;
+public class NodeImpl extends Node implements PublicInt, Serializable {
+    PublicInt nodeB; //CAMBIA CON INTERF NODO B
+    private Set<Node> inConn;
+    private Set<Node> outConn;
 
 
-    public Node() throws ConfigurationException {
+    public NodeImpl(XMLConfiguration config) throws ConfigurationException {
+        super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"));
         inConn = new HashSet<>();
         outConn = new HashSet<>();
-        XMLConfiguration config = new XMLConfiguration("config.xml");
-        host = config.getString("myself.host");
-        port = config.getInt("myself.port");
-        name = config.getString("myself.name");
-        System.setProperty("java.rmi.server.hostname",host);
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
-            inConn.add(new Connection(hc.getString("host"),hc.getString("name")));
+            inConn.add(new NodeImpl(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
         }
         List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
-            outConn.add(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
+            outConn.add(new NodeImpl(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
     }
 
-    public NodeInt getNodeB() {
+    public NodeImpl(String host, int port, String name) {
+        super(host,port,name);
+    }
+
+    @Override
+    public Serializable getState() {
+        return null;
+    }
+
+    @Override
+    public void restoreSnapshot(Snapshot snapshot) {
+
+    }
+
+
+    public PublicInt getNodeB() {
         return nodeB;
     }
 
-    public String getHost() {
-        return host;
-    }
 
-    public int getPort() {
-        return port;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Set<Connection> getInConn() {
+    public Set<Node> getInConn() {
         return inConn;
     }
 
-    public Set<Connection> getOutConn() {
+    public Set<Node> getOutConn() {
         return outConn;
+    }
+
+    public void addConnection(Node c, boolean isOutgoing){
+        if (isOutgoing) {
+            outConn.add(c);
+        } else {
+            inConn.add(c);
+        }
     }
 
     @Override
@@ -77,7 +81,7 @@ public class Node implements ConnectionInt, NodeInt, Serializable {
                     "\nWhoami\nAccording to InetAddress:\n"+
                     "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
                     "\nAccording to my config:\n"+
-                    "I am node "+name+" with IP "+host
+                    "I am node "+getName()+" with IP "+getHost()
             );
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -95,6 +99,8 @@ public class Node implements ConnectionInt, NodeInt, Serializable {
     }
 
 
+
+    /*
     public void saveConnections(String fileName) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(fileName))) {
             objectOut.writeObject(inConn);
@@ -102,14 +108,6 @@ public class Node implements ConnectionInt, NodeInt, Serializable {
         } catch (Exception e) {
             System.out.println("Raised exception while writing connections on file: " + e.toString());
             e.printStackTrace();
-        }
-    }
-
-    public void addConnection(Connection c){
-        if (c.isOutgoing()) {
-            outConn.add(c);
-        } else {
-            inConn.add(c);
         }
     }
 
@@ -122,4 +120,5 @@ public class Node implements ConnectionInt, NodeInt, Serializable {
             e.printStackTrace();
         }
     }
+     */
 }
