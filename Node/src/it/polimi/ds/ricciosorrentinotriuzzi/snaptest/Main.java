@@ -32,7 +32,7 @@ public class Main {
 
             Thread.sleep(10000);
 
-
+/*
             // TEST CONNESSIONE AI NODI OUTGOING
             for (Connection c : self.getOutConn()) {
                 System.out.println("\nConnecting to "+c.getName()+"...");
@@ -44,7 +44,7 @@ public class Main {
                 self.nodeB.whoami();
                 System.out.println("Whoami of "+c.getName()+" called\n");
             }
-
+*/
 
 
             // MINI TEST SNAPSHOT
@@ -58,13 +58,13 @@ public class Main {
                 method.invoke(NodeImpl.class.getDeclaredConstructor().newInstance(), message.getParameters());
             }
 
-
+/*
             // MINI TEST CONNECTIONS
             Connection c1 = new Connection(true, "testHost", 3306, "IntTest");
             self.addConnection(c1);
             self.saveConnections("connections.cts");
             self.readConnections("connections.cts");
-
+*/
 
         } catch (Exception e) {
             e.printStackTrace();
