@@ -55,30 +55,33 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void startSnapshot(String id) throws SnapEx {
+        String tokenReceivedFrom = null;
+        try {
+            tokenReceivedFrom = RemoteServer.getClientHost();
+        } catch (Exception e) {}
        // synchronized (node) {
-            if (incomingStatus.containsKey(id)) {
-                System.out.println("La chiave è contenuta");
+            if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
+                System.out.println("c'è uno snap in corso e ricevo un token da un incoming");
+                System.out.println("Devo aspettare il token da:");
                 for (String s: incomingStatus.get(id)){
-                    System.out.println("In incoming status c'è " + s);
+                    System.out.println(s);
                 }
-                try {
-                    incomingStatus.get(id).remove(RemoteServer.getClientHost());
-                } catch (ServerNotActiveException e) {
-                    e.printStackTrace();
-                    throw new SnapEx();
+                if (tokenReceivedFrom != null) {
+                    incomingStatus.get(id).remove(tokenReceivedFrom);
+                    System.out.println("Sono stato chiamato da "+tokenReceivedFrom+" e l'ho rimosso dal set");
                 }
-                System.out.println("Stampo incoming status: ");
-                for (String s : incomingStatus.get(id))
-                    System.out.println("Snapshot " + id + "  Nodo " + s);
-
+                System.out.println("Devo aspettare il token ancora da:");
+                for (String s: incomingStatus.get(id)){
+                    System.out.println(s);
+                }
                 //Se lo snapshot è finito
                 if (incomingStatus.get(id).isEmpty()) {
                     saveSnapshot(snaps.get(id));
                     incomingStatus.remove(id);
-                    System.out.println("Lo snapshot " + id + "è terminato");
+                    System.out.println("Lo snapshot creato da " + id + " è terminato");
                 }
-            } else {
-                System.out.println("Vado nell'else");
+            } else { //è la prima volta che ricevo un token di startSnap
+                System.out.println("Inizio il mio snapshot");
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
                 //System.out.println("CI ARRIVO");
@@ -88,15 +91,10 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 for (Node connection : incomingConnections) {
                     incoming.add(connection.getHost());
                 }
-                try {
-                    incoming.remove(RemoteServer.getClientHost());
-                } catch (ServerNotActiveException e) {
-                    //e.printStackTrace();
-                }
+                if (tokenReceivedFrom != null) {incoming.remove(tokenReceivedFrom);}
                 incomingStatus.put(id, incoming);
 
                 System.out.println("Avvia gli snap degli outgoing");
-                //System.out.println("outgoing: " + outgoingConnections.toString());
                 try {
                     System.out.println("Outgoing nodes:");
                     for (Node connection : outgoingConnections) {
@@ -104,14 +102,15 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                         SnapInt<S, M> snapRemInt = ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt"));
-                        System.out.println("La trovo");
+                        System.out.println("Remote interface di "+connection.getHost()+" trovata");
                         snapRemInt.startSnapshot(id);
-                        System.out.println("La chiamo");
+                        System.out.println("Snapshot a "+connection.getHost()+" richiesto");
                     }
+                    System.out.println("set empty? "+incomingStatus.get(id).isEmpty());
                     if (incomingStatus.get(id).isEmpty()) {
                         saveSnapshot(snaps.get(id));
                         incomingStatus.remove(id);
-                        System.out.println("Lo snapshot " + id + "è terminato");
+                        System.out.println("Lo snapshot appena avviato da me " + id + " è terminato xke ne avevo solo 1 in input");
                     }
                 } catch (NotBoundException | RemoteException e) {
                     e.printStackTrace();
