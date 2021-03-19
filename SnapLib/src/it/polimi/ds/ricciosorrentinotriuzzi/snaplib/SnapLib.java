@@ -63,11 +63,11 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         new Thread(() -> {
             // synchronized (node) {
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
-                System.out.println("c'è uno snap in corso e ricevo un token da un incoming");
-                System.out.println("Devo aspettare il token da: ");
+                System.out.println("c'è uno snap in corso e ricevo un token da "+tokenReceivedFrom);
+                /*System.out.println("Devo aspettare il token da: ");
                 for (String s: incomingStatus.get(id)){
                     System.out.println(s);
-                }
+                }*/
                 if (tokenReceivedFrom != null) {
                     incomingStatus.get(id).remove(tokenReceivedFrom);
                     System.out.println("Sono stato chiamato da "+tokenReceivedFrom+" e l'ho rimosso dal set");
@@ -130,30 +130,27 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         }
     }
 
-    private void serializeState(S state, String snapshotID) {
-        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snapshotID+".state"))) {
-            objectOut.writeObject(state);
-            System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
 
-    private S readState(String snapshotID) {
-        S state;
-        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(snapshotID+".state"))) {
-            state = (S) objectOut.readObject();
-            System.out.println("The state " + snapshotID + ".state was successfully read from the file");
-            return state;
+
+    private S saveState(S state, String snapshotID) {
+        File f = new File("temp.state");
+        S temp = null;
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(f))) {
+            objectOut.writeObject(state);
+            //System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
         } catch (Exception ex) {
             ex.printStackTrace();
             return null;
         }
-    }
-
-    private S saveState(S state, String snapshotID) {
-        serializeState(state, snapshotID);
-        return readState(snapshotID);
+        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(f))) {
+            temp = (S) objectOut.readObject();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+        f.delete();
+        System.out.println("The state for snapshot " + snapshotID + " was successfully saved");
+        return temp;
     }
 
     public void initiateSnapshot(String ip) {
@@ -220,3 +217,28 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         return toRet;
     }
 }
+
+
+
+
+/*
+    private void serializeState(S state, String snapshotID) {
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snapshotID+".state"))) {
+            objectOut.writeObject(state);
+            System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private S readState(String snapshotID) {
+        S state;
+        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(snapshotID+".state"))) {
+            state = (S) objectOut.readObject();
+            System.out.println("The state " + snapshotID + ".state was successfully read from the file");
+            return state;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
+    }*/
