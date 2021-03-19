@@ -1,8 +1,6 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaplib;
 
 import java.io.Serializable;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
 
 public abstract class Node<S extends Serializable, M extends Serializable> {
     private String host;

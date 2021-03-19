@@ -29,7 +29,9 @@ public class Main2 {
         //SnapInt<State, Message> snapRemInt = (SnapInt<State, Message>) LocateRegistry.getRegistry("192.168.1.10",1099).lookup(SnapInt.class.getName());
         ////remint.printStr("CIAO!");
         System.out.println("Avvio snap!");
-        snapLib.startSnapshot(self.getHost());
+        if (self.getName().equals("Vince")) {
+            snapLib.startSnapshot(self.getHost());
+        }
 
 /*
 

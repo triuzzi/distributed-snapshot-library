@@ -63,21 +63,15 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         new Thread(() -> {
             // synchronized (node) {
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
-                System.out.println("c'è uno snap in corso e ricevo un token da "+tokenReceivedFrom);
-                /*System.out.println("Devo aspettare il token da: ");
-                for (String s: incomingStatus.get(id)){
-                    System.out.println(s);
-                }*/
                 if (tokenReceivedFrom != null) {
                     incomingStatus.get(id).remove(tokenReceivedFrom);
-                    System.out.println("Sono stato chiamato da "+tokenReceivedFrom+" e l'ho rimosso dal set");
+                    System.out.println("C'è uno snap in corso, ricevo un token da "+tokenReceivedFrom+" e l'ho rimosso dal set");
                 }
                 System.out.println("Devo aspettare il token ancora da:");
                 for (String s: incomingStatus.get(id)){
                     System.out.println(s);
                 }
-                //Se lo snapshot è finito
-                if (incomingStatus.get(id).isEmpty()) {
+                if (incomingStatus.get(id).isEmpty()) { //Se lo snapshot è finito
                     saveSnapshot(snaps.get(id));
                     incomingStatus.remove(id);
                     System.out.println("Lo snapshot creato da " + id + " è terminato");
@@ -86,7 +80,6 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 System.out.println("Inizio il mio snapshot");
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
-                //System.out.println("CI ARRIVO");
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> awaitingTokenFrom = new HashSet<>();
@@ -96,7 +89,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 if (tokenReceivedFrom != null) {awaitingTokenFrom.remove(tokenReceivedFrom);}
                 incomingStatus.put(id, awaitingTokenFrom);
 
-                System.out.println("Avvia gli snap degli outgoing");
+                System.out.println("Avvio gli snap degli outgoing");
                 try {
                     System.out.println("Outgoing nodes:");
                     for (Node connection : outgoingConnections) {
@@ -104,7 +97,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                         SnapInt<S, M> snapRemInt = ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt"));
-                        System.out.println("Remote interface di "+connection.getHost()+" trovata");
+                        //System.out.println("Remote interface di "+connection.getHost()+" trovata");
                         snapRemInt.startSnapshot(id);
                         System.out.println("Snapshot a "+connection.getHost()+" richiesto");
                     }
@@ -175,14 +168,21 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
 
+    @Override
     public void restore() {
-        synchronized (node) {
+        String TEMPtokenReceivedFrom = null;
+        try {
+            TEMPtokenReceivedFrom = RemoteServer.getClientHost();
+        } catch (Exception e) {}
+        final String tokenReceivedFrom = TEMPtokenReceivedFrom;
+        new Thread(() -> {
+        //synchronized (node) {
             try {
-                if (!pendingRestores.contains(RemoteServer.getClientHost()) && restoring) {
+                if (!pendingRestores.contains(tokenReceivedFrom) && restoring) {
                     restoring = false;
                     pendingRestores = incomingInit();
                 }
-                pendingRestores.remove(RemoteServer.getClientHost());
+                pendingRestores.remove(tokenReceivedFrom);
                 if (!restoring) {
                     node.restoreSnapshot(restoreLast());
                     restoring = true;
@@ -190,7 +190,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     for (Node connection : outgoingConnections) {
                         ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
-                                .lookup("SnapInt")).restore();//TODO CAMBIA NODE INT
+                                .lookup("SnapInt")).restore();
                     }
                 }
                 if (pendingRestores.isEmpty()) {
@@ -201,7 +201,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
             catch (Exception e) {
                 e.printStackTrace();
             }
-        }
+        }).start();
     }
 
     public boolean isRestoring(){return restoring;}
