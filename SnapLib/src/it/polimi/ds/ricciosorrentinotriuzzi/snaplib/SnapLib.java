@@ -33,33 +33,34 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         System.out.println("SnapLib configured");
     }
 
-    public void saveSnapshot(Snapshot<S, M> snap) throws SnapEx {
+    public void saveSnapshot(Snapshot<S, M> snap) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snap.getId()+".snap"))) {
             objectOut.writeObject(snap);
             System.out.println("The snapshot " + snap.getId() + " was successfully written to the file");
         } catch (Exception ex) {
-            throw new SnapEx();
+            ex.printStackTrace();
         }
     }
 
-    public Snapshot<S, M> readSnapshot(String id) throws SnapEx {
+    public Snapshot<S, M> readSnapshot(String id) {
         Snapshot<S, M> snapshot;
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id+".snap"))) {
             snapshot = (Snapshot<S, M>) objectOut.readObject();
             System.out.println("The snapshot " + snapshot.getId() + " was successfully read from the file");
             return snapshot;
         } catch (Exception ex) {
-            throw new SnapEx();
+            return null;
         }
     }
 
     @Override
-    public void startSnapshot(String id) throws SnapEx {
-        String tokenReceivedFrom = null;
-        try {
-            tokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (Exception e) {}
-       // synchronized (node) {
+    public void startSnapshot(String id) {
+        Thread t = new Thread(() -> {
+            String tokenReceivedFrom = null;
+            try {
+                tokenReceivedFrom = RemoteServer.getClientHost();
+            } catch (Exception e) {}
+            // synchronized (node) {
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
                 System.out.println("c'è uno snap in corso e ricevo un token da un incoming");
                 System.out.println("Devo aspettare il token da:");
@@ -114,10 +115,10 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     }
                 } catch (NotBoundException | RemoteException e) {
                     e.printStackTrace();
-                    throw new SnapEx();
                 }
             }
-       // }
+            // }
+        } );
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
@@ -128,32 +129,33 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         }
     }
 
-    private void serializeState(S state, String snapshotID) throws SnapEx {
+    private void serializeState(S state, String snapshotID) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snapshotID+".state"))) {
             objectOut.writeObject(state);
             System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
         } catch (Exception ex) {
-            throw new SnapEx();
+            ex.printStackTrace();
         }
     }
 
-    private S readState(String snapshotID) throws SnapEx {
+    private S readState(String snapshotID) {
         S state;
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(snapshotID+".state"))) {
             state = (S) objectOut.readObject();
             System.out.println("The state " + snapshotID + ".state was successfully read from the file");
             return state;
         } catch (Exception ex) {
-            throw new SnapEx();
+            ex.printStackTrace();
+            return null;
         }
     }
 
-    private S saveState(S state, String snapshotID) throws SnapEx {
+    private S saveState(S state, String snapshotID) {
         serializeState(state, snapshotID);
         return readState(snapshotID);
     }
 
-    public void initiateSnapshot(String ip) throws SnapEx {
+    public void initiateSnapshot(String ip) {
         //TODO genera id lamp clock
         String id = clock+"."+ip/* + ip della macchina*/;
         startSnapshot(id);
@@ -164,7 +166,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         System.out.println("printMsg invoked from "+RemoteServer.getClientHost());
     }
 
-    public Snapshot<S, M> restoreLast() throws SnapEx {
+    public Snapshot<S, M> restoreLast() {
         File snapshots = new File(System.getProperty("user.dir"));
         List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
         //snapnames.sort(String::compareTo);
@@ -175,7 +177,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
 
-    public void restore() throws SnapEx {
+    public void restore() {
         synchronized (node) {
             try {
                 if (!pendingRestores.contains(RemoteServer.getClientHost()) && restoring) {
@@ -199,7 +201,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 }
             }
             catch (Exception e) {
-                throw new SnapEx();
+                e.printStackTrace();
             }
         }
     }

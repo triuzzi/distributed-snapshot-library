@@ -9,9 +9,9 @@ import java.rmi.server.ServerNotActiveException;
 
 public interface SnapInt<S extends Serializable, M extends Serializable> extends Remote {
     void printMsg() throws RemoteException, ServerNotActiveException;
-    //void saveSnapshot(Snapshot<S, M> snap) throws SnapEx;
-    //Snapshot<S, M> readSnapshot(String id) throws SnapEx;
-    void startSnapshot(String id) throws RemoteException, SnapEx;
-    //void initiateSnapshot(String id) throws SnapEx;
-    void restore() throws RemoteException, SnapEx;
+    //void saveSnapshot(Snapshot<S, M> snap);
+    //Snapshot<S, M> readSnapshot(String id);
+    void startSnapshot(String id) throws RemoteException;
+    //void initiateSnapshot(String id);
+    void restore() throws RemoteException;
 }
