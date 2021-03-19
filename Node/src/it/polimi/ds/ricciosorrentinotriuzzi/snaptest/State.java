@@ -3,17 +3,17 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 import java.io.Serializable;
 
 public class State implements Serializable {
-    int i;
+    String i;
 
     public State() {
-        this.i = 10;
+        this.i = "ciao";
     }
 
-    public int getI() {
+    public String getI() {
         return i;
     }
 
-    public void setI(int i) {
+    public void setI(String i) {
         this.i = i;
     }
 }

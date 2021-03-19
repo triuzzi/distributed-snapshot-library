@@ -86,7 +86,7 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
                     "\nAccording to my config:\n"+
                     "I am node "+getName()+" with IP "+getHost()
             );
-            state.setI(100);
+            //state.setI("100");
             System.out.println("I settato a " + state.getI());
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -95,6 +95,7 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
 
     @Override
     public void printStr(String toPrint) throws RemoteException {
+        state.setI(toPrint);
         try {
             System.out.println("printStr invoked from "+ RemoteServer.getClientHost());
         } catch (ServerNotActiveException e) {
