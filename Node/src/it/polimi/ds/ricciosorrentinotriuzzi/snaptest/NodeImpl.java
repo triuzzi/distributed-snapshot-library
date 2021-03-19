@@ -16,6 +16,7 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
     PublicInt nodeB; //CAMBIA CON INTERF NODO B
     private Set<Node> inConn;
     private Set<Node> outConn;
+    private State state;
 
 
     public NodeImpl(XMLConfiguration config) throws ConfigurationException {
@@ -30,6 +31,7 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
         for (HierarchicalConfiguration hc : outgoingConn) {
             outConn.add(new NodeImpl(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
+        state = new State();
     }
 
     public NodeImpl(String host, int port, String name) {
@@ -38,11 +40,12 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
 
     @Override
     public Serializable getState() {
-        return null;
+        return state;
     }
 
     @Override
     public void restoreSnapshot(Snapshot snapshot) {
+        this.state = (State) snapshot.getState();
 
     }
 
@@ -83,6 +86,8 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
                     "\nAccording to my config:\n"+
                     "I am node "+getName()+" with IP "+getHost()
             );
+            state.setI(100);
+            System.out.println("I settato a " + state.getI());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -95,7 +100,8 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
         } catch (ServerNotActiveException e) {
             System.out.println("printStr autoinvoked");
         }
-        System.out.println(toPrint);
+        System.out.println("Stato attuale: " + state.getI());
+        //System.out.println(toPrint);
     }
 
 

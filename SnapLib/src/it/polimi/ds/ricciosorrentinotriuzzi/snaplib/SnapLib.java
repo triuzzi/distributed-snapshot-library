@@ -55,14 +55,22 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void startSnapshot(String id) throws SnapEx {
-        synchronized (node) {
+       // synchronized (node) {
             if (incomingStatus.containsKey(id)) {
+                System.out.println("La chiave è contenuta");
+                for (String s: incomingStatus.get(id)){
+                    System.out.println("In incoming status c'è " + s);
+                }
                 try {
                     incomingStatus.get(id).remove(RemoteServer.getClientHost());
                 } catch (ServerNotActiveException e) {
                     e.printStackTrace();
                     throw new SnapEx();
                 }
+                System.out.println("Stampo incoming status: ");
+                for (String s : incomingStatus.get(id))
+                    System.out.println("Snapshot " + id + "  Nodo " + s);
+
                 //Se lo snapshot è finito
                 if (incomingStatus.get(id).isEmpty()) {
                     saveSnapshot(snaps.get(id));
@@ -70,30 +78,47 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     System.out.println("Lo snapshot " + id + "è terminato");
                 }
             } else {
+                System.out.println("Vado nell'else");
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
-                System.out.println("Non sono lo stesso, vero? : " + node == saveState(node.getState(), id));
+                System.out.println("CI ARRIVO");
+                System.out.println("Non sono lo stesso, vero? : " + (node == saveState(node.getState(), id)));
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> incoming = new HashSet<>();
                 for (Node connection : incomingConnections) {
                     incoming.add(connection.getHost());
                 }
+                try {
+                    incoming.remove(RemoteServer.getClientHost());
+                } catch (ServerNotActiveException e) {
+                    e.printStackTrace();
+                }
                 incomingStatus.put(id, incoming);
 
-                //Avvia gli snap degli outgoing
+                System.out.println("Avvia gli snap degli outgoing");
+                System.out.println("outgoing: " + outgoingConnections.toString());
                 try {
                     for (Node connection : outgoingConnections) {
-                        ((SnapInt<S, M>) LocateRegistry
+                        System.out.println("Hots: " + connection.getHost() + " Port: " + connection.getPort());
+                        SnapInt<S, M> snapRemInt = ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
-                                .lookup("SnapInt")).startSnapshot(id);
+                                .lookup(SnapInt.class.getName()));
+                        System.out.println("La trovo");
+                        snapRemInt.startSnapshot(id);
+                        System.out.println("La chiamo");
+                    }
+                    if (incomingStatus.get(id).isEmpty()) {
+                        saveSnapshot(snaps.get(id));
+                        incomingStatus.remove(id);
+                        System.out.println("Lo snapshot " + id + "è terminato");
                     }
                 } catch (NotBoundException | RemoteException e) {
                     e.printStackTrace();
                     throw new SnapEx();
                 }
             }
-        }
+       // }
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
@@ -129,7 +154,6 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         return readState(snapshotID);
     }
 
-    @Override
     public void initiateSnapshot(String ip) throws SnapEx {
         //TODO genera id lamp clock
         String id = clock+"."+ip/* + ip della macchina*/;
@@ -143,7 +167,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     public Snapshot<S, M> restoreLast() throws SnapEx {
         File snapshots = new File(System.getProperty("user.dir"));
-        List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(iml))$)")).collect(Collectors.toList());
+        List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
         //snapnames.sort(String::compareTo);
         // System.out.println(snapnames.get(snapnames.size()-1));
         System.out.println(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
@@ -182,6 +206,10 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     }
 
     public boolean isRestoring(){return restoring;}
+
+    public boolean discardMessage(String incomingConnection){
+        return (isRestoring() && pendingRestores.contains(incomingConnection));
+    }
 
     private Set<String> incomingInit(){
         Set<String> toRet = new HashSet<>();
