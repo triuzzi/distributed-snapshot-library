@@ -16,10 +16,10 @@ public class Main2 {
 
         NodeImpl self = new NodeImpl(config);
         PublicInt stub = (PublicInt) UnicastRemoteObject.exportObject(self, 1099);
-
+        registry.bind("PublicInt", stub);
 
         SnapLib<State, Message> snapLib = new SnapLib<State, Message>(registry, self.getInConn(), self.getOutConn(), self);
-        registry.bind("PublicInt", stub);
+
 
         //Naming.bind("rmi://localhost:1099/NodeInt",stub);
         System.out.println("Server ready\n");

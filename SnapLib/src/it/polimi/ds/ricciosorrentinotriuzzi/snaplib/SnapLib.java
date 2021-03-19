@@ -55,15 +55,16 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void startSnapshot(String id) {
-        Thread t = new Thread(() -> {
-            String tokenReceivedFrom = null;
-            try {
-                tokenReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {}
+        String TEMPtokenReceivedFrom = null;
+        try {
+            TEMPtokenReceivedFrom = RemoteServer.getClientHost();
+        } catch (Exception e) {}
+        final String tokenReceivedFrom = TEMPtokenReceivedFrom;
+        new Thread(() -> {
             // synchronized (node) {
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
                 System.out.println("c'è uno snap in corso e ricevo un token da un incoming");
-                System.out.println("Devo aspettare il token da:");
+                System.out.println("Devo aspettare il token da: ");
                 for (String s: incomingStatus.get(id)){
                     System.out.println(s);
                 }
@@ -88,12 +89,12 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 //System.out.println("CI ARRIVO");
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
-                Set<String> incoming = new HashSet<>();
+                Set<String> awaitingTokenFrom = new HashSet<>();
                 for (Node connection : incomingConnections) {
-                    incoming.add(connection.getHost());
+                    awaitingTokenFrom.add(connection.getHost());
                 }
-                if (tokenReceivedFrom != null) {incoming.remove(tokenReceivedFrom);}
-                incomingStatus.put(id, incoming);
+                if (tokenReceivedFrom != null) {awaitingTokenFrom.remove(tokenReceivedFrom);}
+                incomingStatus.put(id, awaitingTokenFrom);
 
                 System.out.println("Avvia gli snap degli outgoing");
                 try {
@@ -118,7 +119,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 }
             }
             // }
-        } );
+        } ).start();
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
