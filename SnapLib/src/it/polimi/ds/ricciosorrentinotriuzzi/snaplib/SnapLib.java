@@ -20,14 +20,14 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     private long clock;
     private Set<String> pendingRestores;
 
-    public SnapLib(Registry r, Set<Node> incomingConnections, Set<Node> outgoingConnections, Node<S,M> node) throws Exception {
+    public SnapLib(Registry r, Node<S,M> node) throws Exception {
         r.bind("SnapInt", UnicastRemoteObject.exportObject(this, 1099));
         incomingStatus = new HashMap<>();
         snaps = new HashMap<>();
         clock = 0L;
         restoring = false;
-        this.incomingConnections = incomingConnections;
-        this.outgoingConnections = outgoingConnections;
+        this.incomingConnections = node.getIncomingConnections();
+        this.outgoingConnections = node.getOutgoingConnections();
         this.pendingRestores = incomingInit();
         this.node = node;
         System.out.println("SnapLib configured");
