@@ -12,6 +12,11 @@ public class Main2 {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname",config.getString("myself.host"));
+
+        if (config.getString("myself.host").equals("Vince")) {
+            Thread.sleep(3000);
+        }
+
         Registry registry = LocateRegistry.createRegistry(1099);
 
         NodeImpl self = new NodeImpl(config);
@@ -32,6 +37,13 @@ public class Main2 {
         if (self.getName().equals("Vince")) {
             snapLib.startSnapshot(self.getHost());
         }
+
+        Thread.sleep(8000);
+        if (self.getName().equals("Vince")) {
+            snapLib.restore();
+        }
+        Thread.sleep(5000);
+        System.out.println(((State) self.getState()).getI());
 
 /*
 
