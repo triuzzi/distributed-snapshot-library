@@ -10,22 +10,12 @@
             <port>1099</port>
             <name>GianOut</name>
         </conn>
-        <conn>
-            <host>151.75.54.217</host>
-            <port>1099</port>
-            <name>LeleOut</name>
-        </conn>
     </outgoing>
     <incoming>
         <conn>
-            <host>93.71.52.139</host>
-            <port>1099</port>
-            <name>GianOut</name>
-        </conn>
-        <conn>
             <host>151.75.54.217</host>
             <port>1099</port>
-            <name>LeleOut</name>
+            <name>LeleIn</name>
         </conn>
     </incoming>
 </config>

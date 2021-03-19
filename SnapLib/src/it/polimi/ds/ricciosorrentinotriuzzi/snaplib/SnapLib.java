@@ -21,8 +21,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     private Set<String> pendingRestores;
 
     public SnapLib(Registry r, Set<Node> incomingConnections, Set<Node> outgoingConnections, Node<S,M> node) throws Exception {
-        r.bind("SnapInt",this);
-        System.out.println("SnapLib configured");
+        r.bind("SnapInt", UnicastRemoteObject.exportObject(this, 1099));
         incomingStatus = new HashMap<>();
         snaps = new HashMap<>();
         clock = 0L;
@@ -31,6 +30,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         this.outgoingConnections = outgoingConnections;
         this.pendingRestores = incomingInit();
         this.node = node;
+        System.out.println("SnapLib configured");
     }
 
     public void saveSnapshot(Snapshot<S, M> snap) throws SnapEx {
@@ -81,8 +81,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 System.out.println("Vado nell'else");
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
-                System.out.println("CI ARRIVO");
-                System.out.println("Non sono lo stesso, vero? : " + (node == saveState(node.getState(), id)));
+                //System.out.println("CI ARRIVO");
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> incoming = new HashSet<>();
@@ -92,18 +91,19 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 try {
                     incoming.remove(RemoteServer.getClientHost());
                 } catch (ServerNotActiveException e) {
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
                 incomingStatus.put(id, incoming);
 
                 System.out.println("Avvia gli snap degli outgoing");
-                System.out.println("outgoing: " + outgoingConnections.toString());
+                //System.out.println("outgoing: " + outgoingConnections.toString());
                 try {
+                    System.out.println("Outgoing nodes:");
                     for (Node connection : outgoingConnections) {
-                        System.out.println("Hots: " + connection.getHost() + " Port: " + connection.getPort());
+                        System.out.println("Host: " + connection.getHost() + " Port: " + connection.getPort());
                         SnapInt<S, M> snapRemInt = ((SnapInt<S, M>) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
-                                .lookup(SnapInt.class.getName()));
+                                .lookup("SnapInt"));
                         System.out.println("La trovo");
                         snapRemInt.startSnapshot(id);
                         System.out.println("La chiamo");

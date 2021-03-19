@@ -1,7 +1,6 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.SnapInt;
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.SnapLib;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.XMLConfiguration;
 
 import java.rmi.registry.LocateRegistry;
@@ -13,24 +12,24 @@ public class Main2 {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname",config.getString("myself.host"));
-        NodeImpl self = new NodeImpl(config);
-        PublicInt stub = (PublicInt) UnicastRemoteObject.exportObject(self, 1099);
         Registry registry = LocateRegistry.createRegistry(1099);
 
-        SnapLib<State, Message> snapLib = new SnapLib<State, Message>(registry,self.getInConn(), self.getOutConn(), self);
-        SnapInt<State,Message> snapInt = (SnapInt<State, Message>) UnicastRemoteObject.exportObject(snapLib, 1090);
-        registry.bind(PublicInt.class.getName(), stub);
-        registry.bind(SnapInt.class.getName(), snapInt);
+        NodeImpl self = new NodeImpl(config);
+        PublicInt stub = (PublicInt) UnicastRemoteObject.exportObject(self, 1099);
+
+
+        SnapLib<State, Message> snapLib = new SnapLib<State, Message>(registry, self.getInConn(), self.getOutConn(), self);
+        registry.bind("PublicInt", stub);
 
         //Naming.bind("rmi://localhost:1099/NodeInt",stub);
         System.out.println("Server ready\n");
 
         //Thread.sleep(5000);
-        PublicInt remint = (PublicInt) LocateRegistry.getRegistry("192.168.1.10",1099).lookup(PublicInt.class.getName());
+        //PublicInt remint = (PublicInt) LocateRegistry.getRegistry("192.168.1.10",1099).lookup(PublicInt.class.getName());
         //SnapInt<State, Message> snapRemInt = (SnapInt<State, Message>) LocateRegistry.getRegistry("192.168.1.10",1099).lookup(SnapInt.class.getName());
-
         ////remint.printStr("CIAO!");
-        snapLib.startSnapshot("192.168.1.13");
+        System.out.println("Avvio snap!");
+        snapLib.startSnapshot(self.getHost());
 
 /*
 
