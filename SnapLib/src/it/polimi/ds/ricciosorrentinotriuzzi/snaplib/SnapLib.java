@@ -56,12 +56,12 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
     @Override
     public void startSnapshot(String id) {
         synchronized (node) {
-        String TEMPtokenReceivedFrom = null;
-        try {
-            TEMPtokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (Exception e) {}
-        final String tokenReceivedFrom = TEMPtokenReceivedFrom;
-
+            String tokenReceivedFrom = null;
+            try {
+                tokenReceivedFrom = RemoteServer.getClientHost();
+            } catch (Exception e) {}
+            //final String tokenReceivedFrom = TEMPtokenReceivedFrom;
+            
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
                 if (tokenReceivedFrom != null) {
                     incomingStatus.get(id).remove(tokenReceivedFrom);
@@ -76,7 +76,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     incomingStatus.remove(id);
                     System.out.println("Lo snapshot creato da " + id + " è terminato");
                 }
-            } else { //è la prima volta che ricevo un token di startSnap
+            } else { //è la prima volta che ricevo un token di startSnap (o sono io ad averlo fatto partire)
                 System.out.println("Inizio il mio snapshot");
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(node.getState(), id));
@@ -107,17 +107,18 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                         }).start();
                         System.out.println("Snapshot a "+connection.getHost()+" richiesto");
                     }
-                    System.out.println("set empty? "+incomingStatus.get(id).isEmpty());
+                    //Se ho ricevuto il token dall'unico canale in ingresso
+                    System.out.println("set empty? "+incomingStatus.get(id).isEmpty()); 
                     if (incomingStatus.get(id).isEmpty()) {
                         saveSnapshot(snaps.get(id));
                         incomingStatus.remove(id);
-                        System.out.println("Lo snapshot appena avviato da me " + id + " è terminato xke ne avevo solo 1 in input");
+                        System.out.println("Lo snapshot avviato da " + id + " è terminato xke ne avevo solo 1 in input");
                     }
                 } catch (NotBoundException | RemoteException e) {
                     e.printStackTrace();
                 }
             }
-    }
+        }
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio

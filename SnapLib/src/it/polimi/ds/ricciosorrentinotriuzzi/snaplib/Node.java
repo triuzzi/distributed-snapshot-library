@@ -39,6 +39,6 @@ public abstract class Node<S extends Serializable, M extends Serializable> {
     }
 
     public boolean addOutConn(Node outgoing){
-        return incomingConnections.add(outgoing);
+        return outgoingConnections.add(outgoing);
     }
 }
