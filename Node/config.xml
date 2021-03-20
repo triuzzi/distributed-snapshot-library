@@ -1,8 +1,8 @@
 <config>
     <myself>
-        <host>93.148.117.106</host>
+        <host>5.89.125.34</host>
         <port>1099</port>
-        <name>MBA.local</name>
+        <name>Vince</name>
     </myself>
     <outgoing>
         <conn>
