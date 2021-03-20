@@ -55,13 +55,13 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void startSnapshot(String id) {
+        synchronized (node) {
         String TEMPtokenReceivedFrom = null;
         try {
             TEMPtokenReceivedFrom = RemoteServer.getClientHost();
         } catch (Exception e) {}
         final String tokenReceivedFrom = TEMPtokenReceivedFrom;
-        new Thread(() -> {
-            // synchronized (node) {
+
             if (incomingStatus.containsKey(id)) { //c'è uno snap in corso e ricevo un token da un incoming
                 if (tokenReceivedFrom != null) {
                     incomingStatus.get(id).remove(tokenReceivedFrom);
@@ -98,7 +98,13 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("SnapInt"));
                         //System.out.println("Remote interface di "+connection.getHost()+" trovata");
-                        snapRemInt.startSnapshot(id);
+                        new Thread(() -> {
+                            try {
+                                snapRemInt.startSnapshot(id);
+                            } catch (RemoteException e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
                         System.out.println("Snapshot a "+connection.getHost()+" richiesto");
                     }
                     System.out.println("set empty? "+incomingStatus.get(id).isEmpty());
@@ -111,8 +117,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     e.printStackTrace();
                 }
             }
-            // }
-        } ).start();
+    }
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
