@@ -25,4 +25,8 @@ public class Message implements Serializable {
         return methodName;
     }
 
+    @Override
+    public String toString() {
+        return methodName;
+    }
 }

@@ -1,3 +1,4 @@
+/*
 package it.polimi.ds.ricciosorrentinotriuzzi.snaplib;
 
 import java.io.*;
@@ -154,7 +155,9 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     public void initiateSnapshot() {
         String ip = System.getProperty("java.rmi.server.hostname");
-        String id = clock+"."+ip/* + ip della macchina*/;
+        String id = clock+"."+ip*/
+/* + ip della macchina*//*
+;
         startSnapshot(id);
     }
 
@@ -227,6 +230,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
 
 
+*/
 /*
     private void serializeState(S state, String snapshotID) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snapshotID+".state"))) {

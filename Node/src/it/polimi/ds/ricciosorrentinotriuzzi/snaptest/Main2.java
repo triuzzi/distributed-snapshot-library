@@ -1,11 +1,6 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.XMLConfiguration;
-
-import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
-import java.rmi.server.UnicastRemoteObject;
 
 public class Main2 {
     public static void main(String[] args) throws Exception {
@@ -21,16 +16,17 @@ public class Main2 {
 
         SnapLib<State, Message> snapLib = new SnapLib<State, Message>(registry, self);
 */
+        NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
 
-        NodeImpl self = new NodeImpl(config);
+        /*
         if (self.getName().equals("Vince")) {
             Thread.sleep(3000);
             System.out.println("Avvio snap!");
             self.initiateSnapshot();
         }
 
-        /*
+
         Thread.sleep(8000);
         if (self.getName().equals("Vince")) {
             snapLib.restore();

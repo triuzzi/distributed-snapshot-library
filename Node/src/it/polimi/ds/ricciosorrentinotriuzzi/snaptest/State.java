@@ -3,17 +3,25 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 import java.io.Serializable;
 
 public class State implements Serializable {
-    String i;
+    int balance;
 
     public State() {
-        this.i = "ciao";
+        this.balance = 100;
     }
 
-    public String getI() {
-        return i;
+    public int getBalance() {
+        return balance;
     }
 
-    public void setI(String i) {
-        this.i = i;
+    public void setBalance(int balance) {
+        this.balance = balance;
+    }
+
+    public void increase(int diff) {
+        balance += diff;
+    }
+
+    public void decrease(int diff) {
+        balance -= diff;
     }
 }

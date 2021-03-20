@@ -12,7 +12,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Node<S extends Serializable, M extends Serializable> implements SnapInt<S,M>{
+public abstract class Node<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt<S,M> {
     private String host;
     private int port;
     private String name;
@@ -28,12 +28,13 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
     public abstract void restoreSnapshot(Snapshot<S,M> snapshot);
 
     public Node(String host, int port, String name, Registry r) throws RemoteException, AlreadyBoundException {
+        super(1099);
         this.host = host;
         this.port = port;
         this.name = name;
         incomingConns = new HashSet<>();
         outgoingConns = new HashSet<>();
-        r.bind("SnapInt", UnicastRemoteObject.exportObject(this, 1099));
+        r.bind("SnapInt", this);
         incomingStatus = new HashMap<>();
         snaps = new HashMap<>();
         clock = 0L;
@@ -144,11 +145,15 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
     }
 
     //Per ogni snapshot attivo, se il nodo da cui riceviamo il messaggio è nello snap, salva il messaggio
-    public void addMessage(String hostname, M message) {
-        for (Snapshot<S, M> snapshot : snaps.values()){
-            if (incomingStatus.get(snapshot.getId()).contains(hostname))
-                snapshot.addMessage(message);
-        }
+    public synchronized void addMessage(M message) {
+        try {
+            String tokenReceivedFrom = RemoteServer.getClientHost();
+            for (Snapshot<S, M> snapshot : snaps.values()){
+                if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
+                    snapshot.addMessage(message);
+            }
+            System.out.println("Message "+message+" received from "+tokenReceivedFrom+" added");
+        } catch (Exception e) {}
     }
 
     private S saveState(S state, String snapshotID) {
@@ -182,12 +187,13 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
         System.out.println("printMsg invoked from "+RemoteServer.getClientHost());
     }
 
+
     public Snapshot<S, M> restoreLast() {
         File snapshots = new File(System.getProperty("user.dir"));
         List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
         //snapnames.sort(String::compareTo);
         // System.out.println(snapnames.get(snapnames.size()-1));
-        System.out.println(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
+        System.out.println("Lo snapshot selezionato per il restore è: "+snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
         return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
     }
 
@@ -195,13 +201,9 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
 
     @Override
     public void restore() {
-        String TEMPtokenReceivedFrom = null;
-        try {
-            TEMPtokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (Exception e) {}
-        final String tokenReceivedFrom = TEMPtokenReceivedFrom;
-        new Thread(() -> {
+        synchronized (this) {
             try {
+                String tokenReceivedFrom = RemoteServer.getClientHost();
                 if (!pendingRestores.contains(tokenReceivedFrom) && restoring) {
                     restoring = false;
                     pendingRestores = incomingInit();
@@ -212,20 +214,25 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
                     restoring = true;
                     //chiama il restore degli altri sulla current epoch
                     for (ConnInt connInt : outgoingConns) {
-                        ((SnapInt<S, M>) LocateRegistry
-                                .getRegistry(connInt.getHost(), connInt.getPort())
-                                .lookup("SnapInt")).restore();
+                        new Thread(() -> {
+                            try {
+                                ((SnapInt<S, M>) LocateRegistry
+                                        .getRegistry(connInt.getHost(), connInt.getPort())
+                                        .lookup("SnapInt")).restore();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        }).start();
                     }
                 }
                 if (pendingRestores.isEmpty()) {
                     restoring = false;
                     pendingRestores = incomingInit();
                 }
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 e.printStackTrace();
             }
-        }).start();
+        }
     }
 
     public boolean isRestoring(){return restoring;}

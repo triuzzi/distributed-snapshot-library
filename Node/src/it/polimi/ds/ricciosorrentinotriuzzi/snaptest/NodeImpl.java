@@ -1,22 +1,24 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
-import org.apache.commons.configuration.*;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Node;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.HierarchicalConfiguration;
+import org.apache.commons.configuration.XMLConfiguration;
 
-import java.io.*;
+import java.io.Serializable;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
-import java.rmi.server.UnicastRemoteObject;
-import java.util.*;
+import java.util.List;
 
-public class NodeImpl extends Node implements PublicInt, Serializable {
+public class NodeImpl extends Node<State, Message> implements PublicInt, Serializable {
     private State state;
 
     public NodeImpl(XMLConfiguration config) throws ConfigurationException, AlreadyBoundException, RemoteException {
@@ -31,17 +33,26 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
             addOutConn(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
         state = new State();
-        LocateRegistry.getRegistry(1099).bind("PublicInt", (PublicInt) UnicastRemoteObject.exportObject(this, 1099));
+        //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, 1099);
+        LocateRegistry.getRegistry(1099).bind("PublicInt", this);
     }
 
     @Override
-    public Serializable getState() {
+    public State getState() {
         return state;
     }
 
     @Override
-    public void restoreSnapshot(Snapshot snapshot) {
-        this.state = (State) snapshot.getState();
+    public void restoreSnapshot(Snapshot<State,Message> snapshot) {
+        this.state = snapshot.getState();
+        for (Message message : snapshot.getMessages()) {
+            try {
+                Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
+                method.invoke(NodeImpl.class.getDeclaredConstructor().newInstance(), message.getParameters());
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
 
     }
 
@@ -60,8 +71,6 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
                     "\nAccording to my config:\n"+
                     "I am node "+getName()+" with IP "+getHost()
             );
-            //state.setI("100");
-            System.out.println("I settato a " + state.getI());
         } catch (UnknownHostException e) {
             e.printStackTrace();
         }
@@ -69,14 +78,24 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
 
     @Override
     public void printStr(String toPrint) throws RemoteException {
-        state.setI(toPrint);
         try {
             System.out.println("printStr invoked from "+ RemoteServer.getClientHost());
         } catch (ServerNotActiveException e) {
             System.out.println("printStr autoinvoked");
         }
-        System.out.println("Stato attuale: " + state.getI());
-        //System.out.println(toPrint);
+        System.out.println(toPrint);
+    }
+
+    @Override
+    public void increase(int diff) {
+        addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().increase(diff);
+    }
+
+    @Override
+    public void decrease(int diff) {
+        addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().decrease(diff);
     }
 
 
