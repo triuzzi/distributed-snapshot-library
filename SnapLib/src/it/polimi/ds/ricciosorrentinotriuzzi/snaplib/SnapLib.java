@@ -152,8 +152,8 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         return temp;
     }
 
-    public void initiateSnapshot(String ip) {
-        //TODO genera id lamp clock
+    public void initiateSnapshot() {
+        String ip = System.getProperty("java.rmi.server.hostname");
         String id = clock+"."+ip/* + ip della macchina*/;
         startSnapshot(id);
     }

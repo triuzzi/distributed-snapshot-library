@@ -12,7 +12,7 @@ public class Main2 {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname",config.getString("myself.host"));
-
+/*
         Registry registry = LocateRegistry.createRegistry(1099);
 
         NodeImpl self = new NodeImpl(config);
@@ -20,14 +20,14 @@ public class Main2 {
         registry.bind("PublicInt", stub);
 
         SnapLib<State, Message> snapLib = new SnapLib<State, Message>(registry, self);
-
+*/
         System.out.println("Server ready\n");
 
-
+        NodeImpl self = new NodeImpl(config);
         if (self.getName().equals("Vince")) {
             Thread.sleep(3000);
             System.out.println("Avvio snap!");
-            snapLib.startSnapshot(self.getHost());
+            self.initiateSnapshot();
         }
 
         /*

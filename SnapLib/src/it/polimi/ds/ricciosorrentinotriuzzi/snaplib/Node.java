@@ -172,9 +172,8 @@ public abstract class Node<S extends Serializable, M extends Serializable> imple
         return temp;
     }
 
-    public void initiateSnapshot(String ip) {
-        //TODO genera id lamp clock
-        String id = clock+"."+ip/* + ip della macchina*/;
+    public void initiateSnapshot() {
+        String id = clock+"."+host/* + ip della macchina*/;
         startSnapshot(id);
     }
 
