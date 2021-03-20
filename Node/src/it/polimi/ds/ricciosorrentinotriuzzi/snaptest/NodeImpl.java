@@ -3,10 +3,8 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Node;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
-import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
-
 import java.io.Serializable;
 import java.lang.reflect.Method;
 import java.net.InetAddress;
@@ -21,7 +19,7 @@ import java.util.List;
 public class NodeImpl extends Node<State, Message> implements PublicInt, Serializable {
     private State state;
 
-    public NodeImpl(XMLConfiguration config) throws ConfigurationException, AlreadyBoundException, RemoteException {
+    public NodeImpl(XMLConfiguration config) throws AlreadyBoundException, RemoteException {
         super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"), LocateRegistry.createRegistry(1099));
 
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
@@ -49,12 +47,26 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
             try {
                 Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
                 method.invoke(NodeImpl.class.getDeclaredConstructor().newInstance(), message.getParameters());
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { e.printStackTrace(); }
         }
-
     }
+
+
+    @Override
+    public void increase(int diff) {
+        addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().increase(diff);
+    }
+
+    @Override
+    public void decrease(int diff) {
+        addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().decrease(diff);
+    }
+
+
+
+
 
     @Override
     public void whoami() throws RemoteException {
@@ -67,9 +79,9 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
             InetAddress inetAddress = InetAddress.getLocalHost();
             System.out.println(
                     "\nWhoami\nAccording to InetAddress:\n"+
-                    "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
-                    "\nAccording to my config:\n"+
-                    "I am node "+getName()+" with IP "+getHost()
+                            "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
+                            "\nAccording to my config:\n"+
+                            "I am node "+getName()+" with IP "+getHost()
             );
         } catch (UnknownHostException e) {
             e.printStackTrace();
@@ -86,21 +98,20 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
         System.out.println(toPrint);
     }
 
-    @Override
-    public void increase(int diff) {
-        addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
-        getState().increase(diff);
-    }
 
-    @Override
-    public void decrease(int diff) {
-        addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
-        getState().decrease(diff);
-    }
+}
 
 
 
-    /*
+
+
+
+
+
+
+
+
+/*
     public void saveConnections(String fileName) {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(fileName))) {
             objectOut.writeObject(inConn);
@@ -121,4 +132,3 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
         }
     }
      */
-}
