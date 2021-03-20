@@ -13,23 +13,18 @@ import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
 public class NodeImpl extends Node implements PublicInt, Serializable {
-    PublicInt nodeB; //CAMBIA CON INTERF NODO B
-    private Set<Node> inConn;
-    private Set<Node> outConn;
     private State state;
-
 
     public NodeImpl(XMLConfiguration config) throws ConfigurationException {
         super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"));
-        inConn = new HashSet<>();
-        outConn = new HashSet<>();
+
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
-            inConn.add(new NodeImpl(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
+            addInConn(new NodeImpl(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
         }
         List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
-            outConn.add(new NodeImpl(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
+            addOutConn(new NodeImpl(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
         state = new State();
     }
@@ -47,28 +42,6 @@ public class NodeImpl extends Node implements PublicInt, Serializable {
     public void restoreSnapshot(Snapshot snapshot) {
         this.state = (State) snapshot.getState();
 
-    }
-
-
-    public PublicInt getNodeB() {
-        return nodeB;
-    }
-
-
-    public Set<Node> getInConn() {
-        return inConn;
-    }
-
-    public Set<Node> getOutConn() {
-        return outConn;
-    }
-
-    public void addConnection(Node c, boolean isOutgoing){
-        if (isOutgoing) {
-            outConn.add(c);
-        } else {
-            inConn.add(c);
-        }
     }
 
     @Override

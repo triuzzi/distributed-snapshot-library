@@ -1,6 +1,7 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaplib;
 
 import java.io.Serializable;
+import java.util.HashSet;
 import java.util.Set;
 
 public abstract class Node<S extends Serializable, M extends Serializable> {
@@ -17,17 +18,27 @@ public abstract class Node<S extends Serializable, M extends Serializable> {
         this.host = host;
         this.port = port;
         this.name = name;
+        incomingConnections = new HashSet<>();
+        outgoingConnections = new HashSet<>();
     }
 
     public int getPort() {return port;}
     public String getHost() {return host;}
     public String getName() {return name;}
 
-    public Set<Node> getIncomingConnections() {
+    public Set<Node> getInConn() {
         return incomingConnections;
     }
 
-    public Set<Node> getOutgoingConnections() {
+    public Set<Node> getOutConn() {
         return outgoingConnections;
+    }
+
+    public boolean addInConn(Node incoming){
+        return incomingConnections.add(incoming);
+    }
+
+    public boolean addOutConn(Node outgoing){
+        return incomingConnections.add(outgoing);
     }
 }

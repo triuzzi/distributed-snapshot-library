@@ -26,8 +26,8 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         snaps = new HashMap<>();
         clock = 0L;
         restoring = false;
-        this.incomingConnections = node.getIncomingConnections();
-        this.outgoingConnections = node.getOutgoingConnections();
+        this.incomingConnections = node.getInConn();
+        this.outgoingConnections = node.getOutConn();
         this.pendingRestores = incomingInit();
         this.node = node;
         System.out.println("SnapLib configured");
