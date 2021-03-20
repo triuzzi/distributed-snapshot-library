@@ -11,8 +11,8 @@ import java.util.stream.Collectors;
 
 
 public class SnapLib <S extends Serializable, M extends Serializable> implements SnapInt<S, M> {
-    private Set<Node> incomingConnections;
-    private Set<Node> outgoingConnections;
+    private Set<ConnInt> incomingConnInts;
+    private Set<ConnInt> outgoingConnInts;
     private Map<String, Set<String>> incomingStatus; //map(idSnap, set(inHost)) se è presente, vuol dire che non ho ancora ricevuto il marker)
     private Map<String, Snapshot<S, M>> snaps; //map(idSnap, Snap)
     private boolean restoring;
@@ -26,8 +26,8 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
         snaps = new HashMap<>();
         clock = 0L;
         restoring = false;
-        this.incomingConnections = node.getInConn();
-        this.outgoingConnections = node.getOutConn();
+        this.incomingConnInts = node.getInConn();
+        this.outgoingConnInts = node.getOutConn();
         this.pendingRestores = incomingInit();
         this.node = node;
         System.out.println("SnapLib configured");
@@ -83,8 +83,8 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 snaps.put(id, newSnapshot);
                 //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> awaitingTokenFrom = new HashSet<>();
-                for (Node connection : incomingConnections) {
-                    awaitingTokenFrom.add(connection.getHost());
+                for (ConnInt connInt : incomingConnInts) {
+                    awaitingTokenFrom.add(connInt.getHost());
                 }
                 if (tokenReceivedFrom != null) {awaitingTokenFrom.remove(tokenReceivedFrom);}
                 incomingStatus.put(id, awaitingTokenFrom);
@@ -92,12 +92,12 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                 System.out.println("Avvio gli snap degli outgoing");
                 try {
                     System.out.println("Outgoing nodes:");
-                    for (Node connection : outgoingConnections) {
-                        System.out.println("Host: " + connection.getHost() + " Port: " + connection.getPort());
+                    for (ConnInt connInt : outgoingConnInts) {
+                        System.out.println("Host: " + connInt.getHost() + " Port: " + connInt.getPort());
                         SnapInt<S, M> snapRemInt = ((SnapInt<S, M>) LocateRegistry
-                                .getRegistry(connection.getHost(), connection.getPort())
+                                .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt"));
-                        //System.out.println("Remote interface di "+connection.getHost()+" trovata");
+                        System.out.println("Remote interface di "+ connInt.getHost()+" trovata");
                         new Thread(() -> {
                             try {
                                 snapRemInt.startSnapshot(id);
@@ -105,7 +105,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                                 e.printStackTrace();
                             }
                         }).start();
-                        System.out.println("Snapshot a "+connection.getHost()+" richiesto");
+                        System.out.println("Snapshot a "+ connInt.getHost()+" richiesto");
                     }
                     //Se ho ricevuto il token dall'unico canale in ingresso
                     System.out.println("set empty? "+incomingStatus.get(id).isEmpty()); 
@@ -176,7 +176,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     @Override
     public void restore() {
-        String TEMPtokenReceivedFrom = null;
+            String TEMPtokenReceivedFrom = null;
         try {
             TEMPtokenReceivedFrom = RemoteServer.getClientHost();
         } catch (Exception e) {}
@@ -193,9 +193,9 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
                     node.restoreSnapshot(restoreLast());
                     restoring = true;
                     //chiama il restore degli altri sulla current epoch
-                    for (Node connection : outgoingConnections) {
+                    for (ConnInt connInt : outgoingConnInts) {
                         ((SnapInt<S, M>) LocateRegistry
-                                .getRegistry(connection.getHost(), connection.getPort())
+                                .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt")).restore();
                     }
                 }
@@ -218,7 +218,7 @@ public class SnapLib <S extends Serializable, M extends Serializable> implements
 
     private Set<String> incomingInit(){
         Set<String> toRet = new HashSet<>();
-        for (Node c : incomingConnections)
+        for (ConnInt c : incomingConnInts)
             toRet.add(c.getHost());
         return toRet;
     }

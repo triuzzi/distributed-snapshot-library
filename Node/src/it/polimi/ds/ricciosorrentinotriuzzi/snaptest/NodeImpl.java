@@ -7,30 +7,31 @@ import org.apache.commons.configuration.*;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 
 public class NodeImpl extends Node implements PublicInt, Serializable {
     private State state;
 
-    public NodeImpl(XMLConfiguration config) throws ConfigurationException {
-        super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"));
+    public NodeImpl(XMLConfiguration config) throws ConfigurationException, AlreadyBoundException, RemoteException {
+        super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"), LocateRegistry.createRegistry(1099));
 
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
-            addInConn(new NodeImpl(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
+            addInConn(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
         }
         List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
-            addOutConn(new NodeImpl(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
+            addOutConn(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
         state = new State();
-    }
-
-    public NodeImpl(String host, int port, String name) {
-        super(host,port,name);
+        LocateRegistry.getRegistry(1099).bind("PublicInt", (PublicInt) UnicastRemoteObject.exportObject(this, 1099));
     }
 
     @Override
