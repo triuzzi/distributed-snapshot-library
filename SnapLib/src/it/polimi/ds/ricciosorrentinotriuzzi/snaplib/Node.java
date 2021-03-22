@@ -50,7 +50,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
             String markerReceivedFrom = null;
             try {
                 markerReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {e.printStackTrace();}
+            } catch (Exception e) {}
 
             if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
                 System.out.println("Lo snap "+id+" era già in corso");
@@ -114,6 +114,8 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         try {
             String tokenReceivedFrom = RemoteServer.getClientHost();
             for (Snapshot<S, M> snapshot : snaps.values()){
+                System.out.println("Entro nel foreach");
+                System.out.println(snapshot.getId());
                 if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
                     snapshot.addMessage(message);
             }
@@ -160,7 +162,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
             String tokenReceivedFrom = null;
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {e.printStackTrace();}
+            } catch (Exception e) {}
             try {
                 if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
                     restoring = false;
@@ -206,20 +208,15 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snap.getId()+".snap"))) {
             objectOut.writeObject(snap);
             System.out.println("The snapshot " + snap.getId() + " was successfully written to the file");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        } catch (Exception ex) { ex.printStackTrace(); }
     }
 
     private Snapshot<S, M> readSnapshot(String id) {
-        Snapshot<S, M> snapshot;
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id+".snap"))) {
-            snapshot = (Snapshot<S, M>) objectOut.readObject();
+            Snapshot<S, M> snapshot = (Snapshot<S, M>) objectOut.readObject();
             System.out.println("The snapshot " + snapshot.getId() + " was successfully read from the file");
             return snapshot;
-        } catch (Exception ex) {
-            return null;
-        }
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
     }
 
     public int getPort() {return port;}
