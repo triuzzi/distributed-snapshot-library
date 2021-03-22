@@ -46,7 +46,7 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
         for (Message message : snapshot.getMessages()) {
             try {
                 Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
-                method.invoke(NodeImpl.class.getDeclaredConstructor().newInstance(), message.getParameters());
+                method.invoke(this, message.getParameters());
             } catch (Exception e) { e.printStackTrace(); }
         }
     }
@@ -54,6 +54,7 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
 
     @Override
     public void increase(Integer diff) {
+        if (shouldDiscard()) { return; }
         addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().increase(diff);
         System.out.println("Increase di "+diff);
@@ -62,6 +63,7 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
 
     @Override
     public void decrease(Integer diff) {
+        if (shouldDiscard()) { return; }
         addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().decrease(diff);
         System.out.println("Decrease di "+diff);

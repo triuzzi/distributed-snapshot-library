@@ -19,7 +19,7 @@ public class Main2 {
         }
 
         if (self.getName().equals("Vince")) {
-            Thread.sleep(15000);
+            Thread.sleep(30000);
             System.out.println("Inizio restore");
             self.restore();
         }

@@ -7,6 +7,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
+import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -22,7 +23,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     private final Map<String, Snapshot<S, M>> snaps; //map(idSnap, Snap)
     private boolean restoring;
     private long clock;
-    private Set<String> pendingRestores;
+    private Set<String> pendingRestores; //set di host in ingresso da cui devo ancora ricevere il marker se c'è una restore in corso
 
     public abstract S getState();
     public abstract void restoreSnapshot(Snapshot<S,M> snapshot);
@@ -113,16 +114,27 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
 
     //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
     public synchronized void addMessage(M message) {
+        String tokenReceivedFrom = null;
         try {
-            String tokenReceivedFrom = RemoteServer.getClientHost();
-            for (Snapshot<S, M> snapshot : snaps.values()){
+            tokenReceivedFrom = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) {;}
+        if (tokenReceivedFrom != null) {
+            for (Snapshot<S, M> snapshot : snaps.values()) {
                 System.out.println("Entro nel foreach");
                 System.out.println(snapshot.getId());
                 if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
                     snapshot.addMessage(message);
             }
-            System.out.println("Message "+message+" received from "+tokenReceivedFrom+" added");
-        } catch (Exception e) { e.printStackTrace(); }
+            System.out.println("Message " + message + " received from " + tokenReceivedFrom + " added");
+        }
+    }
+
+    public boolean shouldDiscard() {
+        String tokenReceivedFrom = null;
+        try {
+            tokenReceivedFrom = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) {}
+        return (isRestoring() && pendingRestores.contains(tokenReceivedFrom));
     }
 
     //Salva lo stato per lo snapshot identificato da snapshotID
@@ -148,8 +160,6 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     }
 
 
-
-
     public Snapshot<S, M> restoreLast() {
         File snapshots = new File(System.getProperty("user.dir"));
         //System.out.println("Snapshots list: " + snapshots.list());
@@ -168,16 +178,21 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
             String tokenReceivedFrom = null;
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {}
+            } catch (Exception e) { System.out.println("Restore iniziata di mia iniziativa"); }
             try {
-                if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
-                    restoring = false;
-                    pendingRestores = incomingInit();
+                if (tokenReceivedFrom != null) {
+                    //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+                    //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
+                    if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
+                        restoring = false;
+                        pendingRestores = incomingInit();
+                    }
+                    //rimuovo chi mi ha mandato il marker dal set
+                    pendingRestores.remove(tokenReceivedFrom);
                 }
-                if (tokenReceivedFrom != null) pendingRestores.remove(tokenReceivedFrom);
                 if (!restoring) {
-                    this.restoreSnapshot(restoreLast());
                     restoring = true;
+                    this.restoreSnapshot(restoreLast());
                     //chiama il restore degli altri sulla current epoch
                     for (ConnInt connInt : outgoingConns) {
                         new Thread(() -> {
@@ -198,10 +213,6 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     }
 
     public boolean isRestoring() { return restoring; }
-
-    public boolean discardMessage(String incomingConnection) {
-        return (isRestoring() && pendingRestores.contains(incomingConnection));
-    }
 
     private Set<String> incomingInit() {
         Set<String> toRet = new HashSet<>();
@@ -242,3 +253,9 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         return outgoingConns.add(outgoing);
     }
 }
+
+/*
+    public boolean discardMessage(String incomingConnection) {
+        return (isRestoring() && pendingRestores.contains(incomingConnection));
+    }
+ */

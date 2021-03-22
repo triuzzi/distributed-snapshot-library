@@ -5,7 +5,7 @@ import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 
 public class Connection implements ConnInt {
     private String host;
-    private int port;
+    private Integer port;
     private String name;
 
     public Connection(String outHostname, Integer port, String name) {
@@ -14,7 +14,7 @@ public class Connection implements ConnInt {
         this.name = name;
     }
 
-    public int getPort() {
+    public Integer getPort() {
         return port;
     }
 
