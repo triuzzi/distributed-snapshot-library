@@ -147,9 +147,16 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
 
     public Snapshot<S, M> restoreLast() {
         File snapshots = new File(System.getProperty("user.dir"));
+        System.out.println("Snapshots list: " + snapshots.list());
         List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
-        System.out.println("Lo snapshot selezionato per il restore è: "+snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
-        return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
+        if(!snapnames.isEmpty()) {
+            System.out.println("Lo snapshot selezionato per il restore è: " + snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
+            return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
+        }
+        else {
+            System.out.println("Snapnames è vuota!");
+            return null;
+        }
     }
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
