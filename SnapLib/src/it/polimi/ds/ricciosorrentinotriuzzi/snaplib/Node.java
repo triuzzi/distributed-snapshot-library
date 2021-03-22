@@ -13,7 +13,7 @@ import java.util.stream.Collectors;
 
 public abstract class Node<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt {
     private final String host;
-    private final int port;
+    private final Integer port;
     private final String name;
     private final Set<ConnInt> incomingConns;
     private final Set<ConnInt> outgoingConns;
@@ -27,7 +27,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     public abstract S getState();
     public abstract void restoreSnapshot(Snapshot<S,M> snapshot);
 
-    public Node(String host, int port, String name, Registry r) throws RemoteException, AlreadyBoundException {
+    public Node(String host, Integer port, String name, Registry r) throws RemoteException, AlreadyBoundException {
         super(1099);
         this.host = host;
         this.port = port;
@@ -50,7 +50,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
             String markerReceivedFrom = null;
             try {
                 markerReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {}
+            } catch (Exception e) { System.out.println("Snapshot iniziato di mia iniziativa"); }
 
             if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
                 System.out.println("Lo snap "+id+" era già in corso");
@@ -65,6 +65,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                 if (incomingStatus.get(id).isEmpty()) { //Se lo snapshot è finito
                     saveSnapshot(snaps.get(id));
                     incomingStatus.remove(id);
+                    snaps.remove(id);
                     System.out.println("Lo snapshot " + id + " è terminato");
                 }
             } else { //è la prima volta che ricevo il marker id di startSnap (o sono io ad averlo fatto partire)
@@ -102,6 +103,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                     if (incomingStatus.get(id).isEmpty()) {
                         saveSnapshot(snaps.get(id));
                         incomingStatus.remove(id);
+                        snaps.remove(id);
                         System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)");
                     }
                 } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
@@ -124,6 +126,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     }
 
     //Salva lo stato per lo snapshot identificato da snapshotID
+    @SuppressWarnings("unchecked")
     private S saveState(String snapshotID) {
         File f = new File("temp.state");
         S temp;
@@ -149,16 +152,12 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
 
     public Snapshot<S, M> restoreLast() {
         File snapshots = new File(System.getProperty("user.dir"));
-        System.out.println("Snapshots list: " + snapshots.list());
+        //System.out.println("Snapshots list: " + snapshots.list());
         List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
         if(!snapnames.isEmpty()) {
             System.out.println("Lo snapshot selezionato per il restore è: " + snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
             return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
-        }
-        else {
-            System.out.println("Snapnames è vuota!");
-            return null;
-        }
+        } else { return null; }
     }
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
@@ -218,6 +217,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
+    @SuppressWarnings("unchecked")
     private Snapshot<S, M> readSnapshot(String id) {
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id+".snap"))) {
             Snapshot<S, M> snapshot = (Snapshot<S, M>) objectOut.readObject();
@@ -226,7 +226,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         } catch (Exception ex) { ex.printStackTrace(); return null; }
     }
 
-    public int getPort() {return port;}
+    public Integer getPort() {return port;}
     public String getHost() {return host;}
     public String getName() {return name;}
     public Set<ConnInt> getInConn() {

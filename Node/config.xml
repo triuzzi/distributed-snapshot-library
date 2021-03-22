@@ -6,9 +6,9 @@
     </myself>
     <outgoing>
         <conn>
-            <host>93.71.52.139</host>
+            <host>151.75.54.217</host>
             <port>1099</port>
-            <name>GianOut</name>
+            <name>LeleOut</name>
         </conn>
     </outgoing>
     <incoming>
@@ -18,4 +18,9 @@
             <name>LeleIn</name>
         </conn>
     </incoming>
+    <conn>
+        <host>93.71.52.139</host>
+        <port>1099</port>
+        <name>GianOut</name>
+    </conn>
 </config>
