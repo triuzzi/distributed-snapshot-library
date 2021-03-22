@@ -2,6 +2,8 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import org.apache.commons.configuration.XMLConfiguration;
 
+import java.rmi.registry.LocateRegistry;
+
 public class Main2 {
     public static void main(String[] args) throws Exception {
         System.out.println("\nStarting server...");
@@ -9,6 +11,7 @@ public class Main2 {
         System.setProperty("java.rmi.server.hostname",config.getString("myself.host"));
         NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
+
 
         if (self.getName().equals("Vince")) {
             Thread.sleep(3000);
@@ -21,6 +24,11 @@ public class Main2 {
             System.out.println("Inizio restore");
             self.restore();
         }
+
+        Thread.sleep(10000);
+        PublicInt vinc = (PublicInt) LocateRegistry.getRegistry("5.89.125.34", 1099).lookup("PublicInt");
+        System.out.println("Call to Vinc increase method");
+        vinc.increase(100);
 
         Thread.sleep(5000);
         System.out.println(self.getState().getBalance());
