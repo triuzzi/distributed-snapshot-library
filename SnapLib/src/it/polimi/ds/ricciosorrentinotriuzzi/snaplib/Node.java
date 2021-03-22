@@ -38,9 +38,9 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         r.bind("SnapInt", this);
         incomingStatus = new HashMap<>();
         snaps = new HashMap<>();
+        pendingRestores = new HashSet<>();
         clock = 0L;
         restoring = false;
-        this.pendingRestores = incomingInit();
         System.out.println("SnapLib configured");
     }
 
@@ -117,11 +117,9 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         String tokenReceivedFrom = null;
         try {
             tokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) {;}
+        } catch (ServerNotActiveException e) {}
         if (tokenReceivedFrom != null) {
             for (Snapshot<S, M> snapshot : snaps.values()) {
-                System.out.println("Entro nel foreach");
-                System.out.println(snapshot.getId());
                 if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
                     snapshot.addMessage(message);
             }
@@ -129,6 +127,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         }
     }
 
+    //Se c'è una restore in corso i messaggi vanno scartati (le chiamate RMI devono terminare immediatamente)
     public boolean shouldDiscard() {
         String tokenReceivedFrom = null;
         try {
@@ -191,6 +190,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                     pendingRestores.remove(tokenReceivedFrom);
                 }
                 if (!restoring) {
+                    pendingRestores = incomingInit();
                     restoring = true;
                     this.restoreSnapshot(restoreLast());
                     //chiama il restore degli altri sulla current epoch
@@ -204,9 +204,10 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                         }).start();
                     }
                 }
+                // se non devo aspettare il marker più da nessuno la restore è terminata
                 if (pendingRestores.isEmpty()) {
                     restoring = false;
-                    pendingRestores = incomingInit();
+                    System.out.println("Restore terminata!");
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
@@ -253,9 +254,3 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         return outgoingConns.add(outgoing);
     }
 }
-
-/*
-    public boolean discardMessage(String incomingConnection) {
-        return (isRestoring() && pendingRestores.contains(incomingConnection));
-    }
- */
