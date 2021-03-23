@@ -177,20 +177,17 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
             String tokenReceivedFrom = null;
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
+                System.out.println("Marker per il restore ricevuto da: "+tokenReceivedFrom);
             } catch (Exception e) { System.out.println("Restore iniziata di mia iniziativa"); }
             try {
-                if (tokenReceivedFrom != null) {
-                    //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
-                    //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
-                    if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
-                        restoring = false;
-                        pendingRestores = incomingInit();
-                    }
-                    //rimuovo chi mi ha mandato il marker dal set
-                    pendingRestores.remove(tokenReceivedFrom);
+                //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+                //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
+                if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
+                    restoring = false;
                 }
                 if (!restoring) {
                     pendingRestores = incomingInit();
+                    //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
                     restoring = true;
                     this.restoreSnapshot(restoreLast());
                     //chiama il restore degli altri sulla current epoch
@@ -198,12 +195,13 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                         new Thread(() -> {
                             try {
                                 ((SnapInt) LocateRegistry
-                                        .getRegistry(connInt.getHost(), connInt.getPort())
-                                        .lookup("SnapInt")).restore();
+                                    .getRegistry(connInt.getHost(), connInt.getPort())
+                                    .lookup("SnapInt")).restore();
                             } catch (Exception e) { e.printStackTrace(); }
                         }).start();
                     }
                 }
+                if (tokenReceivedFrom != null) { pendingRestores.remove(tokenReceivedFrom); }
                 // se non devo aspettare il marker più da nessuno la restore è terminata
                 if (pendingRestores.isEmpty()) {
                     restoring = false;
@@ -238,15 +236,11 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         } catch (Exception ex) { ex.printStackTrace(); return null; }
     }
 
-    public Integer getPort() {return port;}
-    public String getHost() {return host;}
-    public String getName() {return name;}
-    public Set<ConnInt> getInConn() {
-        return incomingConns;
-    }
-    public Set<ConnInt> getOutConn() {
-        return outgoingConns;
-    }
+    public Integer getPort() { return port; }
+    public String getHost() { return host; }
+    public String getName() { return name; }
+    public Set<ConnInt> getInConn() { return incomingConns; }
+    public Set<ConnInt> getOutConn() { return outgoingConns; }
     public boolean addInConn(ConnInt incoming){
         return incomingConns.add(incoming);
     }

@@ -13,15 +13,14 @@ public class Main2 {
         System.out.println("Server ready\n");
 
         if (self.getName().equals("Vince")) {
-            //Thread.sleep(3000);
+            Thread.sleep(5_000);
             System.out.println("Avvio snap con balance: "+self.getState().getBalance());
             self.initiateSnapshot();
-        }
-
-        if (self.getName().equals("Vince")) {
-            Thread.sleep(25000);
+            Thread.sleep(30_000);
             System.out.println("Inizio restore");
             self.restore();
+            Thread.sleep(20_000);
+            System.out.println("My final balance: "+self.getState().getBalance());
         }
 
 

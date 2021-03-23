@@ -54,7 +54,7 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
 
     @Override
     public void increase(Integer diff) {
-        if (shouldDiscard()) { return; }
+        if (shouldDiscard()) { System.out.println("Increase "+diff+" scartata"); return; }
         addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().increase(diff);
         System.out.println("Increase di "+diff);
@@ -63,7 +63,7 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
 
     @Override
     public void decrease(Integer diff) {
-        if (shouldDiscard()) { return; }
+        if (shouldDiscard()) { System.out.println("Decrease di "+diff+" scartata"); return; }
         addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().decrease(diff);
         System.out.println("Decrease di "+diff);
