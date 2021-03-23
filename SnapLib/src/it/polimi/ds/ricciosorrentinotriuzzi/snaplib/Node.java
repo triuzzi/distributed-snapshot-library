@@ -159,20 +159,12 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     }
 
 
-    public Snapshot<S, M> restoreLast() {
-        File snapshots = new File(System.getProperty("user.dir"));
-        //System.out.println("Snapshots list: " + snapshots.list());
-        List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
-        if(!snapnames.isEmpty()) {
-            System.out.println("Lo snapshot selezionato per il restore è: " + snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
-            return readSnapshot(snapnames.get(0).split("((\\.(?i)(snap))$)")[0]);
-        } else { return null; }
-    }
+
 
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
 
     @Override
-    public void restore() {
+    public void restore(String id) {
         synchronized (this) {
             String tokenReceivedFrom = null;
             try {
@@ -189,14 +181,15 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                     pendingRestores = incomingInit();
                     //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
                     restoring = true;
-                    this.restoreSnapshot(restoreLast());
+                    Snapshot<S, M> toRestore = readSnapshot(id);
+                    this.restoreSnapshot(toRestore);
                     //chiama il restore degli altri sulla current epoch
                     for (ConnInt connInt : outgoingConns) {
                         new Thread(() -> {
                             try {
                                 ((SnapInt) LocateRegistry
                                     .getRegistry(connInt.getHost(), connInt.getPort())
-                                    .lookup("SnapInt")).restore();
+                                    .lookup("SnapInt")).restore(toRestore.getId());
                             } catch (Exception e) { e.printStackTrace(); }
                         }).start();
                     }
@@ -227,13 +220,37 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
+    //TODO Potrebbe restituire null se il nodo che si è connesso non effettua lo snapshot in tempo prima che
+    // venga chiamata la restore
     @SuppressWarnings("unchecked")
     private Snapshot<S, M> readSnapshot(String id) {
+        Snapshot<S, M> toReturn = null;
+        if(id == null){
+            File snapshots = new File(System.getProperty("user.dir"));
+            //System.out.println("Snapshots list: " + snapshots.list());
+            List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
+            snapnames.sort(String::compareTo);
+            if(!snapnames.isEmpty()) {
+                System.out.println("TEST Lo snapshot selezionato per il restore è: " + snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0]);
+                id = snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0];
+            }
+        }
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id+".snap"))) {
-            Snapshot<S, M> snapshot = (Snapshot<S, M>) objectOut.readObject();
-            System.out.println("The snapshot " + snapshot.getId() + " was successfully read from the file");
-            return snapshot;
+            toReturn = (Snapshot<S, M>) objectOut.readObject();
+            System.out.println("The snapshot " + toReturn.getId() + " was successfully read from the file");
+
         } catch (Exception ex) { ex.printStackTrace(); return null; }
+        clock = Long.parseLong(toReturn.getId().split("\\.")[0]) + 1;
+        return toReturn;
+    }
+
+    /* Elimina gli snapshot con nome > since   */                                                                                                                                                          @SuppressWarnings("unchecked")
+    private void deleteSnapshots(String since){
+        File snapshotsDir = new File(System.getProperty("user.dir"));
+        for(File snapshot: snapshotsDir.listFiles()){
+            if(snapshot.getName().compareTo(since) < 0)
+                snapshot.delete();
+        }
     }
 
     public Integer getPort() { return port; }
