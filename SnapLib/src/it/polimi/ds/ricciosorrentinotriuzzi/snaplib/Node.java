@@ -235,6 +235,8 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                 id = snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0];
             }
         }
+        else
+            deleteSnapshots(id);
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id+".snap"))) {
             toReturn = (Snapshot<S, M>) objectOut.readObject();
             System.out.println("The snapshot " + toReturn.getId() + " was successfully read from the file");
@@ -248,7 +250,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     private void deleteSnapshots(String since){
         File snapshotsDir = new File(System.getProperty("user.dir"));
         for(File snapshot: snapshotsDir.listFiles()){
-            if(snapshot.getName().compareTo(since) < 0)
+            if(snapshot.getName().matches("([^\\s]+(\\.(?i)(snap))$)") && snapshot.getName().compareTo(since + ".snap") > 0)
                 snapshot.delete();
         }
     }

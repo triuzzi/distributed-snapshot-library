@@ -1,26 +1,21 @@
 <config>
     <myself>
-        <host>5.89.125.34</host>
+        <host>151.75.54.217</host>
         <port>1099</port>
-        <name>Vince</name>
+        <name>Lele.local</name>
     </myself>
     <outgoing>
         <conn>
-            <host>151.75.54.217</host>
+            <host>93.71.52.139</host>
             <port>1099</port>
-            <name>LeleOut</name>
+            <name>Gian</name>
         </conn>
     </outgoing>
     <incoming>
         <conn>
-            <host>151.75.54.217</host>
+            <host>93.71.52.139</host>
             <port>1099</port>
-            <name>LeleIn</name>
+            <name>Gian</name>
         </conn>
     </incoming>
-    <conn>
-        <host>93.71.52.139</host>
-        <port>1099</port>
-        <name>GianOut</name>
-    </conn>
 </config>
