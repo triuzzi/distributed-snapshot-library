@@ -4,6 +4,7 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshottable;
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import java.io.Serializable;
@@ -26,9 +27,11 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     private String host;
     private String name;
     private Integer port;
+    private XMLConfiguration config;
 
     public NodeImpl(XMLConfiguration config) throws AlreadyBoundException, RemoteException {
         super(config.getInt("myself.port"));
+        this.config = config;
 
         host = config.getString("myself.host");
         name = config.getString("myself.name");
@@ -91,8 +94,13 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
 
     @Override
     public void increase(Integer diff) {
-        if (shouldDiscard()) { System.out.println("Increase "+diff+" scartata"); return; }
-        addMessage(new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        String sender = null;
+        try {
+            sender = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) {
+        }
+        if (shouldDiscard(sender)) { System.out.println("Increase "+diff+" scartata"); return; }
+        addMessage(sender, new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().increase(diff);
         System.out.println("Increase di "+diff);
         System.out.println("Balance: "+getState().getBalance());
@@ -100,8 +108,14 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
 
     @Override
     public void decrease(Integer diff) {
-        if (shouldDiscard()) { System.out.println("Decrease di "+diff+" scartata"); return; }
-        addMessage(new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        String sender = null;
+        try {
+            sender = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) {
+        }
+
+        if (shouldDiscard(sender)) { System.out.println("Decrease di "+diff+" scartata"); return; }
+        addMessage(sender, new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().decrease(diff);
         System.out.println("Decrease di "+diff);
         System.out.println("Balance: "+getState().getBalance());
@@ -136,7 +150,52 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         }
         System.out.println(toPrint);
     }
+
+    @Override
+    public boolean connect(boolean isOutgoing, String host, int port, String name) throws RemoteException {
+        Connection toAdd = new Connection(host, port, name);
+        if(isOutgoing)
+            outgoingConnections.add(toAdd);
+         else
+            incomingConnections.add(toAdd);
+
+        XMLConfiguration configuration = new XMLConfiguration();
+        XMLConfiguration out = new XMLConfiguration();
+        out.addProperty("conn", "");
+        configuration.addProperty("host", host);
+        configuration.addProperty("name", name);
+        configuration.addProperty("port", port);
+        out.configurationAt("conn").append(configuration);
+        config.configurationAt((isOutgoing ? "outgoing":"incoming")).append(out);
+
+        try {
+            config.save();
+            return true;
+        } catch (ConfigurationException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    @Override
+    public boolean disconnect(boolean isOutgoing, String host, int port, String name) throws RemoteException {
+        (isOutgoing ? outgoingConnections : incomingConnections).removeIf((o)-> o.getHost().equals(host) && o.getPort() == port && o.getName().equals(name));
+        //per ora facciamo così, po s ver
+        config.clearTree((isOutgoing ? "outgoing":"incoming"));
+
+        for(ConnInt conn : isOutgoing ? outgoingConnections : incomingConnections){
+            config.addProperty((isOutgoing ? "outgoing":"incoming") + ".conn", "'&lt;'host'&rt;'" + conn.getHost() + "</host> \n <port>" + conn.getPort() + "</port> \n <name>" + conn.getName() + "</name>");
+        }
+        try {
+            config.save();
+            return true;
+        } catch (ConfigurationException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
+
 
 
 
