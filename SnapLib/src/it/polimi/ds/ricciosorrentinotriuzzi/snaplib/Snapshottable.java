@@ -31,7 +31,12 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     //TODO VEDERE SE VA CAMBIANDO
     public Snapshottable(Integer port) throws RemoteException, AlreadyBoundException {
         super(port);
-        Registry r = LocateRegistry.createRegistry(port);
+        Registry r;
+        try{
+            r = LocateRegistry.getRegistry(port);
+        } catch (RemoteException e){
+            r = LocateRegistry.createRegistry(port);
+        }
         r.bind("SnapInt", this);
         incomingStatus = new HashMap<>();
         runningSnapshots = new HashMap<>();
