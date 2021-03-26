@@ -32,12 +32,10 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     public Snapshottable(Integer port) throws RemoteException, AlreadyBoundException {
         super(port);
         Registry r;
-        try{
-            System.out.println("ENTRO NEL TRY");
+        try {
             r = LocateRegistry.createRegistry(port);
             System.out.println(r);
-        } catch (RemoteException e){
-            System.out.println("ENTRO NEL CATCH");
+        } catch (RemoteException e) {
             r = LocateRegistry.getRegistry(port);
         }
         r.bind("SnapInt", this);
@@ -143,29 +141,17 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     //TODO DA CAMBIARE
     //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
-    public synchronized void addMessage(M message) {
-        String tokenReceivedFrom = null;
-        try {
-            tokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) {
+    public synchronized void addMessage(String sender, M message) {
+        for (Snapshot<S, M> snapshot : runningSnapshots.values()) {
+            if (incomingStatus.get(snapshot.getId()).contains(sender))
+                snapshot.addMessage(sender, message);
         }
-        if (tokenReceivedFrom != null) {
-            for (Snapshot<S, M> snapshot : runningSnapshots.values()) {
-                if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
-                    snapshot.addMessage(tokenReceivedFrom, message);
-            }
-            System.out.println("Message " + message + " received from " + tokenReceivedFrom + " added");
-        }
+        System.out.println("Message " + message + " received from " + sender + " added");
     }
 
     //Se c'è una restore in corso i messaggi vanno scartati (le chiamate RMI devono terminare immediatamente)
-    public boolean shouldDiscard() {
-        String tokenReceivedFrom = null;
-        try {
-            tokenReceivedFrom = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) {
-        }
-        return (isRestoring() && pendingRestores.contains(tokenReceivedFrom));
+    public boolean shouldDiscard(String sender) {
+        return (isRestoring() && pendingRestores.contains(sender));
     }
 
     //Salva lo stato per lo snapshot identificato da snapshotID
