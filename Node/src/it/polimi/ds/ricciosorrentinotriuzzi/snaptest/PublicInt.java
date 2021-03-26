@@ -9,4 +9,8 @@ public interface PublicInt extends Remote {
     void whoami() throws RemoteException;
     void increase(Integer diff) throws RemoteException;
     void decrease(Integer diff) throws RemoteException;
+   /* boolean connect() throws RemoteException;
+    boolean disconnect() throws RemoteException;
+
+    */
 }

@@ -12,12 +12,9 @@ import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public abstract class Node<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt {
-    private final String host;
-    private final Integer port;
-    private final String name;
-    private final Set<ConnInt> incomingConns;
-    private final Set<ConnInt> outgoingConns;
+public abstract class Snapshottable<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt {
+    //metodi abstract che mi passino il riferimento (siamo sicuri di volerlo fare? Ci fidiamo dell'implementazione del metodo?)
+
     //map(idSnap, set(inHost)) se inHost è presente, vuol dire che non ho ancora ricevuto il marker da lui)
     private Map<String, Set<String>> incomingStatus;
     private Map<String, Snapshot<S, M>> runningSnapshots; //map(idSnap, Snap)
@@ -29,17 +26,12 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     // l'aveva già avviato e/o salvato lo scarterà, riportandosi all'ultimo snapshot comunque, che è quello indicato dall'id
     // della restore
 
-    public abstract S getState();
+    //private Registry registry = LocateRegistry.createRegistry(1099);
 
-    public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
-
-    public Node(String host, Integer port, String name, Registry r) throws RemoteException, AlreadyBoundException {
-        super(1099);
-        this.host = host;
-        this.port = port;
-        this.name = name;
-        incomingConns = new HashSet<>();
-        outgoingConns = new HashSet<>();
+    //TODO VEDERE SE VA CAMBIANDO
+    public Snapshottable(Integer port) throws RemoteException, AlreadyBoundException {
+        super(port);
+        Registry r = LocateRegistry.createRegistry(port);
         r.bind("SnapInt", this);
         incomingStatus = new HashMap<>();
         runningSnapshots = new HashMap<>();
@@ -48,6 +40,16 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         restoring = false;
         System.out.println("SnapLib configured");
     }
+
+    public abstract S getState();
+
+    public abstract String getHost();
+
+    public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
+
+    public abstract Set<ConnInt> getInConn();
+
+    public abstract Set<ConnInt> getOutConn();
 
 
     @Override
@@ -89,7 +91,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
 
                     //Inizializzo la mappa di connessioni in ingresso per questo snapshot
                     Set<String> awaitingTokenFrom = new HashSet<>();
-                    for (ConnInt connInt : incomingConns) {
+                    for (ConnInt connInt : getInConn()) {
                         awaitingTokenFrom.add(connInt.getHost());
                     }
                     //Rimuovo chi mi ha mandato il token dal set di host da cui aspettare il marker
@@ -98,10 +100,10 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                     }
                     incomingStatus.put(id, awaitingTokenFrom);
 
-                    System.out.println("Avvio gli snap degli outgoing");
+                    System.out.println("Avvio gli snap degli outgoing 🤯🥵");
                     try {
                         System.out.println("Outgoing nodes:");
-                        for (ConnInt connInt : outgoingConns) {
+                        for (ConnInt connInt : getOutConn()) {
                             System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
                             SnapInt snapRemInt = ((SnapInt) LocateRegistry
                                     .getRegistry(connInt.getHost(), connInt.getPort())
@@ -131,6 +133,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         }
     }
 
+    //TODO DA CAMBIARE
     //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
     public synchronized void addMessage(M message) {
         String tokenReceivedFrom = null;
@@ -141,7 +144,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         if (tokenReceivedFrom != null) {
             for (Snapshot<S, M> snapshot : runningSnapshots.values()) {
                 if (incomingStatus.get(snapshot.getId()).contains(tokenReceivedFrom))
-                    snapshot.addMessage(message);
+                    snapshot.addMessage(tokenReceivedFrom, message);
             }
             System.out.println("Message " + message + " received from " + tokenReceivedFrom + " added");
         }
@@ -181,7 +184,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
     }
 
     public void initiateSnapshot() {
-        String id = clock + "." + host;
+        String id = clock + "." + getHost();
         startSnapshot(id);
     }
 
@@ -213,7 +216,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
                     Snapshot<S, M> toRestore = readSnapshot(id);
                     this.restoreSnapshot(toRestore);
                     //chiama il restore degli altri sulla current epoch
-                    for (ConnInt connInt : outgoingConns) {
+                    for (ConnInt connInt : getOutConn()) {
                         new Thread(() -> {
                             try {
                                 ((SnapInt) LocateRegistry
@@ -239,13 +242,9 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         }
     }
 
-    public boolean isRestoring() {
-        return restoring;
-    }
-
     private Set<String> incomingInit() {
         Set<String> toRet = new HashSet<>();
-        for (ConnInt c : incomingConns)
+        for (ConnInt c : getInConn())
             toRet.add(c.getHost());
         return toRet;
     }
@@ -286,7 +285,6 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         return toReturn;
     }
 
-
     /* Elimina gli snapshot con nome > since   */
     @SuppressWarnings("unchecked")
     private void deleteSnapshots(String since) {
@@ -297,31 +295,7 @@ public abstract class Node<S extends Serializable, M extends Serializable> exten
         }
     }
 
-    public Integer getPort() {
-        return port;
-    }
-
-    public String getHost() {
-        return host;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Set<ConnInt> getInConn() {
-        return incomingConns;
-    }
-
-    public Set<ConnInt> getOutConn() {
-        return outgoingConns;
-    }
-
-    public boolean addInConn(ConnInt incoming) {
-        return incomingConns.add(incoming);
-    }
-
-    public boolean addOutConn(ConnInt outgoing) {
-        return outgoingConns.add(outgoing);
+    public boolean isRestoring() {
+        return restoring;
     }
 }

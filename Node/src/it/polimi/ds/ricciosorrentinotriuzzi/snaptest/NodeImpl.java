@@ -1,8 +1,9 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Node;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshottable;
 import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 import java.io.Serializable;
@@ -14,30 +15,56 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
-public class NodeImpl extends Node<State, Message> implements PublicInt, Serializable {
+public class NodeImpl extends Snapshottable<State, Message> implements PublicInt, Serializable {
     private State state;
+    private Set<ConnInt> incomingConnections;
+    private Set<ConnInt> outgoingConnections;
+    private String host;
+    private String name;
+    private Integer port;
 
     public NodeImpl(XMLConfiguration config) throws AlreadyBoundException, RemoteException {
-        super(config.getString("myself.host"), config.getInt("myself.port"), config.getString("myself.name"), LocateRegistry.createRegistry(1099));
+        super(config.getInt("myself.port"));
+
+        host = config.getString("myself.host");
+        name = config.getString("myself.name");
+        port = config.getInt("myself.port");
+        incomingConnections = new HashSet<>();
+        outgoingConnections = new HashSet<>();
 
         List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
         for (HierarchicalConfiguration hc : incomingConn) {
-            addInConn(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
+            incomingConnections.add(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
         }
         List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
-            addOutConn(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
+            outgoingConnections.add(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
         state = new State();
-        //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, 1099);
-        LocateRegistry.getRegistry(1099).bind("PublicInt", this);
+        //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, port);
+        LocateRegistry.getRegistry(port).bind("PublicInt", this);
     }
 
     @Override
     public State getState() {
         return state;
+    }
+
+    @Override
+    public String getHost() {
+        return host;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getPort() {
+        return port;
     }
 
     @Override
@@ -49,6 +76,16 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
                 method.invoke(this, message.getParameters());
             } catch (Exception e) { e.printStackTrace(); }
         }
+    }
+
+    @Override
+    public Set<ConnInt> getInConn() {
+        return incomingConnections;
+    }
+
+    @Override
+    public Set<ConnInt> getOutConn() {
+        return outgoingConnections;
     }
 
 
@@ -69,10 +106,6 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
         System.out.println("Decrease di "+diff);
         System.out.println("Balance: "+getState().getBalance());
     }
-
-
-
-
 
     @Override
     public void whoami() throws RemoteException {
@@ -103,8 +136,6 @@ public class NodeImpl extends Node<State, Message> implements PublicInt, Seriali
         }
         System.out.println(toPrint);
     }
-
-
 }
 
 

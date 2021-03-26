@@ -26,17 +26,11 @@ public class Connection implements ConnInt {
         return name;
     }
 
-    public boolean equals(Object object) {
-        if (this == object) return true;
-        if (object == null || getClass() != object.getClass()) return false;
-        if (!super.equals(object)) return false;
-
-        Connection that = (Connection) object;
-
-        if (host != null ? !host.equals(that.host) : that.host != null) return false;
-        if (name != null ? !name.equals(that.name) : that.name != null) return false;
-
-        return true;
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ConnInt connInt = (ConnInt) o;
+        return  getHost().equals(connInt.getHost());
     }
 
     public int hashCode() {
