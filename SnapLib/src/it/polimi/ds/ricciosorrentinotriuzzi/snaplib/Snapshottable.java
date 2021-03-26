@@ -33,9 +33,12 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         super(port);
         Registry r;
         try{
-            r = LocateRegistry.getRegistry(port);
-        } catch (RemoteException e){
+            System.out.println("ENTRO NEL TRY");
             r = LocateRegistry.createRegistry(port);
+            System.out.println(r);
+        } catch (RemoteException e){
+            System.out.println("ENTRO NEL CATCH");
+            r = LocateRegistry.getRegistry(port);
         }
         r.bind("SnapInt", this);
         incomingStatus = new HashMap<>();
