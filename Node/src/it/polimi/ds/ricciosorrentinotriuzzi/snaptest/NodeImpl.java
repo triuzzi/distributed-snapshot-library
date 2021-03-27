@@ -89,20 +89,24 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
         try {
+            System.out.println("Connecting to "+host);
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
             node.addConn(!isOutgoingFromMe, this.getHost(), this.getPort(), this.getName());
             addConn(isOutgoingFromMe, host, port, name);
-        } catch (Exception e) {return false;}
+            System.out.println("Connected!");
+        } catch (Exception e) {e.printStackTrace(); return false;}
         return true;
     }
 
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean disconnectFrom(String host, Integer port, boolean isOutgoingFromMe) {
         try {
+            System.out.println("Disconnecting from "+host);
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
             node.removeConn(!isOutgoingFromMe, this.getHost());
             removeConn(isOutgoingFromMe, host);
-        } catch (Exception e) {return false;}
+            System.out.println("Disconnected");
+        } catch (Exception e) {e.printStackTrace(); return false;}
         return true;
     }
 
@@ -122,8 +126,8 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     @Override
     public void removeConn(boolean fromOutgoing, String host) throws RemoteException, ConfigurationException {
         String confSet = fromOutgoing ? "outgoing" : "incoming";
-        (fromOutgoing ? outgoingConnections : incomingConnections).removeIf(o -> o.getHost().equals(host));
-        config.clearTree(confSet+"/conn[@host=\""+host+"\"]");
+        (fromOutgoing ? outgoingConnections : incomingConnections).removeIf( o -> o.getHost().equals(host));
+        config.clearTree(confSet+"/conn[@host='"+host+"']");
         config.save();
     }
 

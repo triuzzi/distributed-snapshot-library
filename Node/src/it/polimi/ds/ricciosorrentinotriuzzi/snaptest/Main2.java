@@ -13,6 +13,10 @@ public class Main2 {
         NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
 
+        self.connectTo("93.71.52.139",1099,"Gianc", false);
+        Thread.sleep(5000);
+        self.disconnectFrom("93.71.52.139",1099, false);
+
 
         /*if (self.getName().equals("Vinceee")) {
             Thread.sleep(5_000);
