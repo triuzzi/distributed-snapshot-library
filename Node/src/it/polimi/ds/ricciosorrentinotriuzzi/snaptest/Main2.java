@@ -1,28 +1,29 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import org.apache.commons.configuration.XMLConfiguration;
+import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
 
-import java.rmi.registry.LocateRegistry;
 
 public class Main2 {
     public static void main(String[] args) throws Exception {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
-        System.setProperty("java.rmi.server.hostname",config.getString("myself.host"));
+        config.setExpressionEngine(new XPathExpressionEngine());
+        System.setProperty("java.rmi.server.hostname", config.getString("host"));
         NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
 
-        if (self.getName().equals("Vince")) {
+
+        /*if (self.getName().equals("Vinceee")) {
             Thread.sleep(5_000);
             System.out.println("Avvio snap con balance: "+self.getState().getBalance());
             self.initiateSnapshot();
             Thread.sleep(30_000);
             System.out.println("Inizio restore");
-            self.restore();
+            //self.restore();
             Thread.sleep(20_000);
             System.out.println("My final balance: "+self.getState().getBalance());
-        }
-
+        }*/
 
     }
 }

@@ -1,74 +1,52 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshot;
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.Snapshottable;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.HierarchicalConfiguration;
-import org.apache.commons.configuration.XMLConfiguration;
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
+import org.apache.commons.configuration.*;
 import java.io.Serializable;
 import java.lang.reflect.Method;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class NodeImpl extends Snapshottable<State, Message> implements PublicInt, Serializable {
     private State state;
-    private Set<ConnInt> incomingConnections;
-    private Set<ConnInt> outgoingConnections;
-    private String host;
-    private String name;
-    private Integer port;
-    private XMLConfiguration config;
+    final private Set<ConnInt> incomingConnections;
+    final private Set<ConnInt> outgoingConnections;
+    final private String host;
+    final private String name;
+    final private Integer port;
+    final private XMLConfiguration config;
 
     public NodeImpl(XMLConfiguration config) throws AlreadyBoundException, RemoteException {
-        super(config.getInt("myself.port"));
+        super(config.getInt("port"));
         this.config = config;
-
-        host = config.getString("myself.host");
-        name = config.getString("myself.name");
-        port = config.getInt("myself.port");
+        host = config.getString("host");
+        name = config.getString("name");
+        port = config.getInt("port");
+        state = new State();
         incomingConnections = new HashSet<>();
         outgoingConnections = new HashSet<>();
 
-        List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming.conn");
+        List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming/conn");
         for (HierarchicalConfiguration hc : incomingConn) {
             incomingConnections.add(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
         }
-        List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing.conn");
+        List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing/conn");
         for (HierarchicalConfiguration hc : outgoingConn) {
             outgoingConnections.add(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
         }
-        state = new State();
         //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, port);
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
     }
 
     @Override
-    public State getState() {
-        return state;
-    }
+    public State getState() { return state; }
 
     @Override
-    public String getHost() {
-        return host;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Integer getPort() {
-        return port;
-    }
+    public String getHost() { return host; }
 
     @Override
     public void restoreSnapshot(Snapshot<State,Message> snapshot) {
@@ -82,23 +60,11 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     }
 
     @Override
-    public Set<ConnInt> getInConn() {
-        return incomingConnections;
-    }
-
-    @Override
-    public Set<ConnInt> getOutConn() {
-        return outgoingConnections;
-    }
-
-
-    @Override
     public void increase(Integer diff) {
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) {
-        }
+        } catch (ServerNotActiveException e) { }
         if (shouldDiscard(sender)) { System.out.println("Increase "+diff+" scartata"); return; }
         addMessage(sender, new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().increase(diff);
@@ -111,9 +77,7 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) {
-        }
-
+        } catch (ServerNotActiveException e) { }
         if (shouldDiscard(sender)) { System.out.println("Decrease di "+diff+" scartata"); return; }
         addMessage(sender, new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
         getState().decrease(diff);
@@ -121,25 +85,56 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         System.out.println("Balance: "+getState().getBalance());
     }
 
-    @Override
-    public void whoami() throws RemoteException {
+
+    //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
+    public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
         try {
-            try {
-                System.out.println("whoami invoked from " + RemoteServer.getClientHost());
-            } catch (ServerNotActiveException e) {
-                System.out.println("whoami invoked from local");
-            }
-            InetAddress inetAddress = InetAddress.getLocalHost();
-            System.out.println(
-                    "\nWhoami\nAccording to InetAddress:\n"+
-                            "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
-                            "\nAccording to my config:\n"+
-                            "I am node "+getName()+" with IP "+getHost()
-            );
-        } catch (UnknownHostException e) {
-            e.printStackTrace();
-        }
+            PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
+            node.addConn(!isOutgoingFromMe, this.getHost(), this.getPort(), this.getName());
+            addConn(isOutgoingFromMe, host, port, name);
+        } catch (Exception e) {return false;}
+        return true;
     }
+
+    //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
+    public boolean disconnectFrom(String host, Integer port, boolean isOutgoingFromMe) {
+        try {
+            PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
+            node.removeConn(!isOutgoingFromMe, this.getHost());
+            removeConn(isOutgoingFromMe, host);
+        } catch (Exception e) {return false;}
+        return true;
+    }
+
+    @Override
+    public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException, ConfigurationException {
+        String confSet = toOutgoing ? "outgoing" : "incoming";
+        (toOutgoing ? outgoingConnections : incomingConnections).add(new Connection(host, port, name));
+        if (!config.containsKey(confSet)) {config.addProperty(confSet,"");}
+        SubnodeConfiguration subset = config.configurationAt(confSet);
+        subset.addProperty("conn","");
+        subset.addProperty("conn[last()] @host", host);
+        subset.addProperty("conn[last()] port", port);
+        subset.addProperty("conn[last()] name", name);
+        config.save();
+    }
+
+    @Override
+    public void removeConn(boolean fromOutgoing, String host) throws RemoteException, ConfigurationException {
+        String confSet = fromOutgoing ? "outgoing" : "incoming";
+        (fromOutgoing ? outgoingConnections : incomingConnections).removeIf(o -> o.getHost().equals(host));
+        config.clearTree(confSet+"/conn[@host=\""+host+"\"]");
+        config.save();
+    }
+
+    @Override
+    public Set<ConnInt> getInConn() { return incomingConnections; }
+
+    @Override
+    public Set<ConnInt> getOutConn() { return outgoingConnections; }
+
+    public String getName() { return name; }
+    public Integer getPort() { return port; }
 
     @Override
     public void printStr(String toPrint) throws RemoteException {
@@ -151,22 +146,24 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         System.out.println(toPrint);
     }
 
-    @Override
+}
+
+/*
+@Override
     public boolean connect(boolean isOutgoing, String host, int port, String name) throws RemoteException {
         Connection toAdd = new Connection(host, port, name);
-        if(isOutgoing)
+        if (isOutgoing)
             outgoingConnections.add(toAdd);
-         else
+        else
             incomingConnections.add(toAdd);
 
-        XMLConfiguration configuration = new XMLConfiguration();
-        XMLConfiguration out = new XMLConfiguration();
-        out.addProperty("conn", "");
-        configuration.addProperty("host", host);
-        configuration.addProperty("name", name);
-        configuration.addProperty("port", port);
-        out.configurationAt("conn").append(configuration);
-        config.configurationAt((isOutgoing ? "outgoing":"incoming")).append(out);
+        XMLConfiguration c = new XMLConfiguration();
+        c.addProperty("conn", "");
+        SubnodeConfiguration conn = c.configurationAt("conn");
+        conn.addProperty("host", host);
+        conn.addProperty("name", name);
+        conn.addProperty("port", port);
+        config.configurationAt(isOutgoing ? "outgoing" : "incoming").append(c);
 
         try {
             config.save();
@@ -179,13 +176,8 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
 
     @Override
     public boolean disconnect(boolean isOutgoing, String host, int port, String name) throws RemoteException {
-        (isOutgoing ? outgoingConnections : incomingConnections).removeIf((o)-> o.getHost().equals(host) && o.getPort() == port && o.getName().equals(name));
-        //per ora facciamo così, po s ver
-        config.clearTree((isOutgoing ? "outgoing":"incoming"));
-
-        for(ConnInt conn : isOutgoing ? outgoingConnections : incomingConnections){
-            config.addProperty((isOutgoing ? "outgoing":"incoming") + ".conn", "'&lt;'host'&rt;'" + conn.getHost() + "</host> \n <port>" + conn.getPort() + "</port> \n <name>" + conn.getName() + "</name>");
-        }
+        (isOutgoing ? outgoingConnections : incomingConnections).removeIf(o -> o.getHost().equals(host));
+        config.clearTree(isOutgoing ? "outgoing"+"/conn[@host=\""+host+"\"]" : "incoming"+"/conn[@host=\""+host+"\"]");
         try {
             config.save();
             return true;
@@ -194,8 +186,7 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
             return false;
         }
     }
-}
-
+ */
 
 
 
@@ -224,6 +215,28 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
             outConn = (Set<Connection>) objectOut.readObject();
         } catch (Exception e) {
             System.out.println("Raised exception while reading connections from file: " + e.toString());
+            e.printStackTrace();
+        }
+    }
+
+
+
+    @Override
+    public void whoami() throws RemoteException {
+        try {
+            try {
+                System.out.println("whoami invoked from " + RemoteServer.getClientHost());
+            } catch (ServerNotActiveException e) {
+                System.out.println("whoami invoked from local");
+            }
+            InetAddress inetAddress = InetAddress.getLocalHost();
+            System.out.println(
+                    "\nWhoami\nAccording to InetAddress:\n"+
+                            "I am node "+inetAddress.getHostName()+" with IP "+inetAddress.getHostAddress()+
+                            "\nAccording to my config:\n"+
+                            "I am node "+getName()+" with IP "+getHost()
+            );
+        } catch (UnknownHostException e) {
             e.printStackTrace();
         }
     }
