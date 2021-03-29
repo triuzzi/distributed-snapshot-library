@@ -45,6 +45,10 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         clock = 0L;
         restoring = false;
         System.out.println("SnapLib configured");
+        if (checkCrash()){
+            restore(null);
+        }
+        initCrashChecker();
     }
 
     public abstract S getState();
@@ -186,7 +190,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
 
     @Override
-    public void restore(String id) {
+    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
         synchronized (this) {
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
@@ -291,5 +295,36 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     public boolean isRestoring() {
         return restoring;
+    }
+
+    public void applyNetworkChange(){
+        new Thread(this::initiateSnapshot).start();
+    }
+
+    private void initCrashChecker(){
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
+            objectOut.writeObject(Boolean.TRUE);
+            System.out.println("The snapshot process has been successfully started.");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    public void safeExit(){
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
+            objectOut.writeObject(Boolean.FALSE);
+            System.out.println("The snapshot process has been successfully closed.");
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+    }
+
+    private boolean checkCrash(){
+        try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
+            return (boolean) objectIn.readObject();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return true;
+        }
     }
 }

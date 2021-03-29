@@ -13,9 +13,25 @@ public class Main2 {
         NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
 
-        self.connectTo("93.71.52.139",1099,"Gianc", false);
-        Thread.sleep(5000);
-        self.disconnectFrom("93.71.52.139",1099, false);
+
+/*
+        Thread.sleep(10_000);
+        self.connectTo("5.89.125.34",1099,"Sbi", true);
+        Thread.sleep(3000);
+        self.connectTo("151.70.145.224",1099,"Lele", true);
+        Thread.sleep(10_000);
+        self.disconnectFrom("151.70.145.224",1099, true);
+        Thread.sleep(1000);
+        self.disconnectFrom("5.89.125.34",1099, true);
+
+        //connect che cerca se già c'è
+        //A OGNI CONNECT/DIS VA FATTO PARTIRE LO SNAP
+        //file con bit flag per detect il crash
+        //metodo di appoggio della lib di "cambio del network"
+        // esempio del map reduce, con il recover del codice già eseguito
+        // NFT con vendita dei token che viaggiano nella rete. Se uno si vuole disconnettere cede tutti i ssuoi token
+        //fai funzione che cambia le connessioni che fa partire lo snap in un nuovo thread
+        //premi un tasto per fare lo snapshot
 
 
         /*if (self.getName().equals("Vinceee")) {
@@ -29,6 +45,7 @@ public class Main2 {
             System.out.println("My final balance: "+self.getState().getBalance());
         }*/
 
+        self.safeExit();
     }
 }
 
