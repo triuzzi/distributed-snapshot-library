@@ -14,24 +14,13 @@ public class Main2 {
         System.out.println("Server ready\n");
 
 
-/*
-        Thread.sleep(10_000);
-        self.connectTo("5.89.125.34",1099,"Sbi", true);
+        Thread.sleep(10000);
+        self.connectTo("87.20.154.215",1099,"Gianc", true);
         Thread.sleep(3000);
         self.connectTo("151.70.145.224",1099,"Lele", true);
-        Thread.sleep(10_000);
+        Thread.sleep(10000);
+        self.disconnectFrom("87.20.154.215",1099, true);
         self.disconnectFrom("151.70.145.224",1099, true);
-        Thread.sleep(1000);
-        self.disconnectFrom("5.89.125.34",1099, true);
-
-        //connect che cerca se già c'è
-        //A OGNI CONNECT/DIS VA FATTO PARTIRE LO SNAP
-        //file con bit flag per detect il crash
-        //metodo di appoggio della lib di "cambio del network"
-        // esempio del map reduce, con il recover del codice già eseguito
-        // NFT con vendita dei token che viaggiano nella rete. Se uno si vuole disconnettere cede tutti i ssuoi token
-        //fai funzione che cambia le connessioni che fa partire lo snap in un nuovo thread
-        //premi un tasto per fare lo snapshot
 
 
         /*if (self.getName().equals("Vinceee")) {

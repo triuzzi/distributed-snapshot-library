@@ -90,9 +90,9 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
         try {
             System.out.println("Connecting to "+host);
+            addConn(isOutgoingFromMe, host, port, name);
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
             node.addConn(!isOutgoingFromMe, this.getHost(), this.getPort(), this.getName());
-            addConn(isOutgoingFromMe, host, port, name);
             System.out.println("Connected!");
         } catch (Exception e) {e.printStackTrace(); return false;}
         return true;
@@ -102,9 +102,9 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
     public boolean disconnectFrom(String host, Integer port, boolean isOutgoingFromMe) {
         try {
             System.out.println("Disconnecting from "+host);
-            PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
-            node.removeConn(!isOutgoingFromMe, this.getHost());
             removeConn(isOutgoingFromMe, host);
+            PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
+            node.removeConn(!isOutgoingFromMe, getHost());
             System.out.println("Disconnected");
         } catch (Exception e) {e.printStackTrace(); return false;}
         return true;
@@ -116,11 +116,14 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         (toOutgoing ? outgoingConnections : incomingConnections).add(new Connection(host, port, name));
         if (!config.containsKey(confSet)) {config.addProperty(confSet,"");}
         SubnodeConfiguration subset = config.configurationAt(confSet);
-        subset.addProperty("conn","");
-        subset.addProperty("conn[last()] @host", host);
-        subset.addProperty("conn[last()] port", port);
-        subset.addProperty("conn[last()] name", name);
-        config.save();
+        if (!subset.containsKey("conn[@host='"+host+"']")) { //TODO TEST
+            subset.addProperty("conn","");
+            subset.addProperty("conn[last()] @host", host);
+            subset.addProperty("conn[last()] port", port);
+            subset.addProperty("conn[last()] name", name);
+            config.save();
+        }
+        if (!host.equals(getHost())) { applyNetworkChange(); } //se è una chiamata remota avvia lo snapshot
     }
 
     @Override
@@ -129,6 +132,7 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         (fromOutgoing ? outgoingConnections : incomingConnections).removeIf( o -> o.getHost().equals(host));
         config.clearTree(confSet+"/conn[@host='"+host+"']");
         config.save();
+        if (!host.equals(getHost())) { applyNetworkChange(); } //se è una chiamata remota avvia lo snapshot
     }
 
     @Override
