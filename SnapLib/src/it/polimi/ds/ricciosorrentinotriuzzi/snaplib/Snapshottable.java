@@ -313,7 +313,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     public void safeExit(){
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.FALSE);
-            System.out.println("The snapshot process has been successfully closed.");
+            System.out.println("The snapshot process for host has been successfully closed.");
         } catch (Exception ex) {
             ex.printStackTrace();
         }
@@ -323,8 +323,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
             return (boolean) objectIn.readObject();
         } catch (Exception ex) {
-            ex.printStackTrace();
-            return true;
+            //ex.printStackTrace();
+            return false; //vuol dire che il file non esisteva ancora, prima run del programma
         }
     }
 }
