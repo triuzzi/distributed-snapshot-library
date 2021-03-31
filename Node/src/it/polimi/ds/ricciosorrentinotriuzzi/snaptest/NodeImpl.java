@@ -2,9 +2,9 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.*;
-import java.io.Serializable;
+
+import java.io.*;
 import java.lang.reflect.Method;
-import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteServer;
@@ -13,52 +13,42 @@ import java.util.*;
 
 public class NodeImpl extends Snapshottable<State, Message> implements PublicInt, Serializable {
     private State state;
-    final private Set<ConnInt> incomingConnections;
-    final private Set<ConnInt> outgoingConnections;
     final private String host;
     final private String name;
     final private Integer port;
     final private XMLConfiguration config;
 
-    public NodeImpl(XMLConfiguration config) throws AlreadyBoundException, RemoteException {
+    public NodeImpl(XMLConfiguration config) throws Exception {
         super(config.getInt("port"));
         this.config = config;
         host = config.getString("host");
         name = config.getString("name");
         port = config.getInt("port");
         state = new State();
-        incomingConnections = new HashSet<>();
-        outgoingConnections = new HashSet<>();
-
-        List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming/conn");
-        for (HierarchicalConfiguration hc : incomingConn) {
-            incomingConnections.add(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
-        }
-        List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing/conn");
-        for (HierarchicalConfiguration hc : outgoingConn) {
-            outgoingConnections.add(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
-        }
-        //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, port);
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-    }
-
-    @Override
-    public State getState() { return state; }
-
-    @Override
-    public String getHost() { return host; }
-
-    @Override
-    public void restoreSnapshot(Snapshot<State,Message> snapshot) {
-        this.state = snapshot.getState();
-        for (Message message : snapshot.getMessages()) {
-            try {
-                Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
-                method.invoke(this, message.getParameters());
-            } catch (Exception e) { e.printStackTrace(); }
+        if (config.containsKey("incoming") && config.containsKey("outgoing")) {
+            joinNetwork();
         }
     }
 
+
+    private void joinNetwork() throws Exception {
+        System.out.println("Joining the network...");
+        SubnodeConfiguration conf = config.configurationAt("incoming");
+        Connection nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
+        state.getIncomingConnections().add(nodeConn);
+        PublicInt node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
+        node.addConn(true, getHost(), getPort(), getName());
+        conf = config.configurationAt("outgoing");
+        nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
+        state.getOutgoingConnections().add(nodeConn);
+        node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
+        node.addConn(false, getHost(), getPort(), getName());
+        applyNetworkChange();
+        System.out.println("Ora sono parte della rete!");
+    }
+
+    //PublicInt Implementation
     @Override
     public void increase(Integer diff) {
         String sender = null;
@@ -85,6 +75,58 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         System.out.println("Balance: "+getState().getBalance());
     }
 
+    @Override
+    public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
+        (toOutgoing ? state.getOutgoingConnections() : state.getIncomingConnections()).add(new Connection(host, port, name));
+    }
+
+    @Override
+    public void removeConn(boolean fromOutgoing, String host) throws RemoteException {
+        (fromOutgoing ? state.getOutgoingConnections() : state.getIncomingConnections()).removeIf(o -> o.getHost().equals(host));
+        try {
+            RemoteServer.getClientHost();
+            applyNetworkChange(); //se è una chiamata remota avvia lo snapshot
+        } catch (ServerNotActiveException e) { }
+    }
+
+    @Override
+    public void printStr(String toPrint) throws RemoteException {
+        try {
+            System.out.println("printStr invoked from "+ RemoteServer.getClientHost());
+        } catch (ServerNotActiveException e) {
+            System.out.println("printStr autoinvoked");
+        }
+        System.out.println(toPrint);
+    }
+
+
+    //Snapshottable Implementation
+    @Override
+    public State getState() { return state; }
+
+    @Override
+    public String getHost() { return host; }
+
+    @Override
+    public void restoreSnapshot(Snapshot<State,Message> snapshot) {
+        this.state = snapshot.getState();
+        for (Message message : snapshot.getMessages()) {
+            try {
+                Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
+                method.invoke(this, message.getParameters());
+            } catch (Exception e) { e.printStackTrace(); }
+        }
+    }
+
+    @Override
+    public Set<ConnInt> getInConn() { return state.getIncomingConnections(); }
+
+    @Override
+    public Set<ConnInt> getOutConn() { return state.getOutgoingConnections(); }
+
+
+
+    //Funzioni di NodeImpl
 
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
@@ -93,6 +135,7 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
             addConn(isOutgoingFromMe, host, port, name);
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
             node.addConn(!isOutgoingFromMe, this.getHost(), this.getPort(), this.getName());
+            applyNetworkChange(); //avvio snapshot
             System.out.println("Connected!");
         } catch (Exception e) {e.printStackTrace(); return false;}
         return true;
@@ -106,57 +149,43 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
             node.removeConn(!isOutgoingFromMe, getHost());
             System.out.println("Disconnected");
-        } catch (Exception e) {e.printStackTrace(); return false;}
+        } catch (Exception e) { e.printStackTrace(); return false; }
         return true;
     }
 
-    @Override
-    public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException, ConfigurationException {
-        String confSet = toOutgoing ? "outgoing" : "incoming";
-        (toOutgoing ? outgoingConnections : incomingConnections).add(new Connection(host, port, name));
-        if (!config.containsKey(confSet)) {config.addProperty(confSet,"");}
-        SubnodeConfiguration subset = config.configurationAt(confSet);
-        if (!subset.containsKey("conn[@host='"+host+"']")) { //TODO TEST
-            subset.addProperty("conn","");
-            subset.addProperty("conn[last()] @host", host);
-            subset.addProperty("conn[last()] port", port);
-            subset.addProperty("conn[last()] name", name);
-            config.save();
-        }
-        if (!host.equals(getHost())) { applyNetworkChange(); } //se è una chiamata remota avvia lo snapshot
-    }
-
-    @Override
-    public void removeConn(boolean fromOutgoing, String host) throws RemoteException, ConfigurationException {
-        String confSet = fromOutgoing ? "outgoing" : "incoming";
-        (fromOutgoing ? outgoingConnections : incomingConnections).removeIf( o -> o.getHost().equals(host));
-        config.clearTree(confSet+"/conn[@host='"+host+"']");
-        config.save();
-        if (!host.equals(getHost())) { applyNetworkChange(); } //se è una chiamata remota avvia lo snapshot
-    }
-
-    @Override
-    public Set<ConnInt> getInConn() { return incomingConnections; }
-
-    @Override
-    public Set<ConnInt> getOutConn() { return outgoingConnections; }
 
     public String getName() { return name; }
     public Integer getPort() { return port; }
-
-    @Override
-    public void printStr(String toPrint) throws RemoteException {
-        try {
-            System.out.println("printStr invoked from "+ RemoteServer.getClientHost());
-        } catch (ServerNotActiveException e) {
-            System.out.println("printStr autoinvoked");
-        }
-        System.out.println(toPrint);
-    }
-
 }
 
 /*
+
+    List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming/conn");
+    for (HierarchicalConfiguration hc : incomingConn) {
+        state.getIncomingConnections().add(new Connection(hc.getString("host"),hc.getInt("port"),hc.getString("name")));
+    }
+    List<HierarchicalConfiguration> outgoingConn =  config.configurationsAt("outgoing/conn");
+    for (HierarchicalConfiguration hc : outgoingConn) {
+        state.getOutgoingConnections().add(new Connection(hc.getString("host"), hc.getInt("port"), hc.getString("name")));
+    }
+    //PublicInt n = (PublicInt) UnicastRemoteObject.exportObject(this, port);
+
+    if (!config.containsKey(confSet)) {config.addProperty(confSet,"");}
+    SubnodeConfiguration subset = config.configurationAt(confSet);
+    if (!subset.containsKey("conn[@host='"+host+"']")) {
+        subset.addProperty("conn","");
+        subset.addProperty("conn[last()] @host", host);
+        subset.addProperty("conn[last()] port", port);
+        subset.addProperty("conn[last()] name", name);
+        config.save();
+    }
+
+    config.clearTree(confSet+"/conn[@host='"+host+"']");
+    config.save();
+
+
+
+
 @Override
     public boolean connect(boolean isOutgoing, String host, int port, String name) throws RemoteException {
         Connection toAdd = new Connection(host, port, name);

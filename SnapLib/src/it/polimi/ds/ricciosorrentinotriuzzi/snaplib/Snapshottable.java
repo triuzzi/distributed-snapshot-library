@@ -7,7 +7,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.RemoteServer;
-import java.rmi.server.ServerNotActiveException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -45,20 +44,14 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         clock = 0L;
         restoring = false;
         System.out.println("SnapLib configured");
-        if (checkCrash()){
-            restore(null);
-        }
+        if (checkCrash()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
         initCrashChecker();
     }
 
     public abstract S getState();
-
     public abstract String getHost();
-
     public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
-
     public abstract Set<ConnInt> getInConn();
-
     public abstract Set<ConnInt> getOutConn();
 
 
@@ -166,28 +159,21 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(f))) {
             objectOut.writeObject(getState());
             //System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        }
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(f))) {
             temp = (S) objectOut.readObject();
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        }
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
         f.delete();
         System.out.println("The state for snapshot " + snapshotID + " was successfully saved");
         return temp;
     }
+
 
     public void initiateSnapshot() {
         String id = clock + "." + getHost();
         startSnapshot(id);
     }
 
-
-    //TODO UPDATE CONNECTIONS (da chiamare quando il nodo cambia le sue connessioni)
 
     @Override
     public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
@@ -251,9 +237,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snap.getId() + ".snap"))) {
             objectOut.writeObject(snap);
             System.out.println("The snapshot " + snap.getId() + " was successfully written to the file");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        } catch (Exception ex) { ex.printStackTrace(); }
     }
 
     //TODO Potrebbe restituire null se il nodo che si è connesso non effettua lo snapshot in tempo prima che
@@ -267,23 +251,19 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             List<String> snapnames = Arrays.stream(Objects.requireNonNull(snapshots.list())).filter(s -> s.matches("([^\\s]+(\\.(?i)(snap))$)")).collect(Collectors.toList());
             snapnames.sort(String::compareTo);
             if (!snapnames.isEmpty()) {
-                System.out.println("TEST Lo snapshot selezionato per il restore è: " + snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0]);
+                System.out.println("Lo snapshot selezionato per il restore è: " + snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0]);
                 id = snapnames.get(snapnames.size() - 1).split("((\\.(?i)(snap))$)")[0];
             }
         } else deleteSnapshots(id);
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id + ".snap"))) {
             toReturn = (Snapshot<S, M>) objectOut.readObject();
             System.out.println("The snapshot " + toReturn.getId() + " was successfully read from the file");
-
-        } catch (Exception ex) {
-            ex.printStackTrace();
-            return null;
-        }
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
         clock = Long.parseLong(toReturn.getId().split("\\.")[0]) + 1;
         return toReturn;
     }
 
-    /* Elimina gli snapshot con nome > since   */
+    /* Elimina gli snapshot con nome > since */
     @SuppressWarnings("unchecked")
     private void deleteSnapshots(String since) {
         File snapshotsDir = new File(System.getProperty("user.dir"));
@@ -305,26 +285,19 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.TRUE);
             System.out.println("The snapshot process has been successfully started.");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+        } catch (Exception ex) { ex.printStackTrace(); }
     }
 
-    public void safeExit(){
+    public void safeExit() {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.FALSE);
-            System.out.println("The snapshot process for host has been successfully closed.");
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
+            System.out.println("The snapshot process has been successfully closed.");
+        } catch (Exception ex) { ex.printStackTrace(); }
     }
 
-    private boolean checkCrash(){
+    private boolean checkCrash() {
         try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
             return (boolean) objectIn.readObject();
-        } catch (Exception ex) {
-            //ex.printStackTrace();
-            return false; //vuol dire che il file non esisteva ancora, prima run del programma
-        }
+        } catch (Exception ex) { return false; }
     }
 }

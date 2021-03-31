@@ -10,8 +10,8 @@ public interface PublicInt extends Remote {
     void printStr(String toPrint) throws RemoteException;
     void increase(Integer diff) throws RemoteException;
     void decrease(Integer diff) throws RemoteException;
-    void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException, ConfigurationException;
-    void removeConn(boolean fromOutgoing, String host) throws RemoteException, ConfigurationException;
+    void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException;
+    void removeConn(boolean fromOutgoing, String host) throws RemoteException;
 
     //void whoami() throws RemoteException;
     /*boolean connect(boolean isOutgoing, String host, int port, String name) throws RemoteException;

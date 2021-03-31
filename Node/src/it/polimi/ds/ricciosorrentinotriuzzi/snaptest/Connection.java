@@ -1,4 +1,3 @@
-
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;

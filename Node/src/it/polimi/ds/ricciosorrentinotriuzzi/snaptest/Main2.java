@@ -1,7 +1,10 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
 import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
+
+import java.util.HashSet;
 
 
 public class Main2 {
@@ -13,14 +16,14 @@ public class Main2 {
         NodeImpl self = new NodeImpl(config);
         System.out.println("Server ready\n");
 
-
-        Thread.sleep(10000);
+        /*Thread.sleep(10000);
         self.connectTo("87.20.154.215",1099,"Gianc", true);
         Thread.sleep(3000);
+        self.connectTo("87.20.154.215",1099,"Gianc", true);
         self.connectTo("151.70.145.224",1099,"Lele", true);
         Thread.sleep(10000);
         self.disconnectFrom("87.20.154.215",1099, true);
-        self.disconnectFrom("151.70.145.224",1099, true);
+        self.disconnectFrom("151.70.145.224",1099, true);*/
 
 
         /*if (self.getName().equals("Vinceee")) {
@@ -34,6 +37,7 @@ public class Main2 {
             System.out.println("My final balance: "+self.getState().getBalance());
         }*/
 
+        Thread.sleep(45_000);
         self.safeExit();
     }
 }
