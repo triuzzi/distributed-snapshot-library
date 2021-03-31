@@ -2,7 +2,6 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.*;
-
 import java.io.*;
 import java.lang.reflect.Method;
 import java.rmi.RemoteException;
@@ -24,9 +23,16 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         host = config.getString("host");
         name = config.getString("name");
         port = config.getInt("port");
+        System.out.println(host);
         state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
+
+        SubnodeConfiguration conf = config.configurationAt("incoming");
+        System.out.println(config.containsKey("incoming"));
+        System.out.println(config.containsKey("outgoing"));
         if (config.containsKey("incoming") && config.containsKey("outgoing")) {
+            //TODO
+            System.out.println("ciao");
             joinNetwork();
         }
     }
