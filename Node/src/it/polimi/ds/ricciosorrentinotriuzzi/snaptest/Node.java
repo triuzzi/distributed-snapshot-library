@@ -10,29 +10,22 @@ import java.rmi.server.RemoteServer;
 import java.rmi.server.ServerNotActiveException;
 import java.util.*;
 
-public class NodeImpl extends Snapshottable<State, Message> implements PublicInt, Serializable {
+public class Node extends Snapshottable<State, Message> implements PublicInt, Serializable {
     private State state;
     final private String host;
     final private String name;
     final private Integer port;
     final private XMLConfiguration config;
 
-    public NodeImpl(XMLConfiguration config) throws Exception {
+    public Node(XMLConfiguration config) throws Exception {
         super(config.getInt("port"));
         this.config = config;
         host = config.getString("host");
         name = config.getString("name");
         port = config.getInt("port");
-        System.out.println(host);
         state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-
-        SubnodeConfiguration conf = config.configurationAt("incoming");
-        System.out.println(config.containsKey("incoming"));
-        System.out.println(config.containsKey("outgoing"));
-        if (config.containsKey("incoming") && config.containsKey("outgoing")) {
-            //TODO
-            System.out.println("ciao");
+        if (!config.getBoolean("newNetwork",true)) {
             joinNetwork();
         }
     }
@@ -118,7 +111,7 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         this.state = snapshot.getState();
         for (Message message : snapshot.getMessages()) {
             try {
-                Method method = NodeImpl.class.getMethod(message.getMethodName(), message.getParameterTypes());
+                Method method = Node.class.getMethod(message.getMethodName(), message.getParameterTypes());
                 method.invoke(this, message.getParameters());
             } catch (Exception e) { e.printStackTrace(); }
         }

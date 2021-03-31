@@ -1,16 +1,13 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import org.apache.commons.configuration.XMLConfiguration;
-import org.apache.commons.configuration.tree.xpath.XPathExpressionEngine;
-
 
 public class Main2 {
     public static void main(String[] args) throws Exception {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
-        //config.setExpressionEngine(new XPathExpressionEngine());
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
-        NodeImpl self = new NodeImpl(config);
+        Node self = new Node(config);
         System.out.println("Server ready\n");
 
         /*Thread.sleep(10000);
