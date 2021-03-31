@@ -85,41 +85,6 @@ public class NodeImpl extends Snapshottable<State, Message> implements PublicInt
         System.out.println("Balance: "+getState().getBalance());
     }
 
-    public boolean initConnection(Set<Connection> incomingsToConnect, (Set<Connection> outgoingsToConnect){
-        boolean repeat = true;
-        int sleepTime = 100;
-        int sleepMax = 5_000;
-        while (!(incomingsToConnect.isEmpty() && outgoingsToConnect.isEmpty()){
-            try {
-                for (Connection c: incomingsToConnect) {
-                    if(connectTo(c.getHost(), c.getPort(), c.getName(), false)){
-                        incomingConnections.add(c);
-                        incomingsToConnect.remove(c);
-                    }
-                }
-                for (Connection c: outgoingsToConnect) {
-                    if(connectTo(c.getHost(), c.getPort(), c.getName(), true)){
-                        outgoingConnections.add(c);
-                        outgoingsToConnect.remove(c);
-                    }
-                }
-                Thread.sleep(sleepTime);
-                sleepTime = Math.min(sleepTime*2, sleepMax);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            //for each outgoing e incoming, provo a connettemrici.
-
-            //prendo tutti quelli dall'init. Prendo gli host dal config e provo
-            //a contattarli. se non ci riesco ricomincio con soli quelli che mi rimangono. Non è facile.
-
-            //altra soluzione. Il grafo viene costruito a step: ci sarà il primo nodo solo, il secondo si connette a 1 in maniera bidir.,
-            //dal terzo in poi ci si può connettere a cazzo
-        }
-
-
-        return true;
-    }
 
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
