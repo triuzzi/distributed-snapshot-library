@@ -32,17 +32,21 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     private void joinNetwork() throws Exception {
         System.out.println("Joining the network...");
+        //aggiungi nodo in ingresso
         SubnodeConfiguration conf = config.configurationAt("incoming");
         Connection nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
         getInConn().add(nodeConn);
         PublicInt node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
         node.addConn(true, getHost(), getPort(), getName());
+        //aggiungi nodo in uscita
         conf = config.configurationAt("outgoing");
         nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
         getOutConn().add(nodeConn);
         node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
-        this.setClock(node.addConn(false, getHost(), getPort(), getName()));
-        applyNetworkChange();
+        node.addConn(false, getHost(), getPort(), getName());
+        //sincronizza clock col nodo in uscita
+        syncClock(nodeConn.getHost(), nodeConn.getPort());
+        applyNetworkChange(); //avvia snap
         System.out.println("Ora sono parte della rete!");
     }
 
@@ -86,10 +90,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     }
 
     @Override
-    public Long addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
+    public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
         (toOutgoing ? getOutConn() : getInConn()).add(new Connection(host, port, name));
         System.out.println("Aggiungo "+host+" negli "+(toOutgoing ? "outgoing" : "incoming"));
-        return this.getClock();
     }
 
     @Override

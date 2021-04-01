@@ -47,8 +47,16 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         resetCrashDetector();
     }
 
-    public void setClock(long clock) { this.clock = clock; }
+    @Override
     public long getClock() { return clock; }
+
+
+    public void syncClock(String withHost, Integer port) throws Exception {
+        clock = ((SnapInt) LocateRegistry
+                .getRegistry(withHost, port)
+                .lookup("SnapInt")).getClock();
+    }
+
     public abstract S getState();
     public abstract String getHost();
     public abstract void restoreSnapshot(Snapshot<S, M> snapshot);

@@ -9,6 +9,6 @@ public interface PublicInt extends Remote {
     void transfer(String to, Integer amount) throws RemoteException;
     void withdraw(String from, Integer amount) throws RemoteException;
     void register(String customer) throws RemoteException;
-    Long addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException;
+    void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException;
     void removeConn(boolean fromOutgoing, String host) throws RemoteException;
 }
