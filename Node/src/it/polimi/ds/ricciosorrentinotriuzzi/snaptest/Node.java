@@ -25,7 +25,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         port = config.getInt("port");
         state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-        if (!config.getBoolean("newNetwork",true)) {
+        if (!config.getBoolean("newNetwork",false)) {
             joinNetwork();
         }
     }
@@ -42,7 +42,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         getOutConn().add(nodeConn);
         node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
         node.addConn(false, getHost(), getPort(), getName());
-        applyNetworkChange();
+        ((SnapInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("SnapInt")).initiateSnapshot();
+        //applyNetworkChange();
         System.out.println("Ora sono parte della rete!");
     }
 
@@ -88,11 +89,13 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     @Override
     public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
         (toOutgoing ? getOutConn() : getInConn()).add(new Connection(host, port, name));
+        System.out.println("Aggiungo "+host+" negli "+(toOutgoing ? "outgoing" : "incoming"));
     }
 
     @Override
     public void removeConn(boolean fromOutgoing, String host) throws RemoteException {
         (fromOutgoing ? getOutConn() : getInConn()).removeIf(o -> o.getHost().equals(host));
+        System.out.println("Rimuovo "+host+" dagli "+(fromOutgoing ? "outgoing" : "incoming"));
         try {
             RemoteServer.getClientHost();
             applyNetworkChange(); //se è una chiamata remota avvia lo snapshot

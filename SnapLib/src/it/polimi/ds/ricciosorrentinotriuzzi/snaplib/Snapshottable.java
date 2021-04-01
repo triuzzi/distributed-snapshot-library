@@ -44,7 +44,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         restoring = false;
         System.out.println("SnapLib configured");
         if (checkCrash()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
-        initCrashChecker();
+        resetCrashDetector();
     }
 
     public abstract S getState();
@@ -83,7 +83,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         saveSnapshot(runningSnapshots.get(id));
                         incomingStatus.remove(id);
                         runningSnapshots.remove(id);
-                        System.out.println("Lo snapshot " + id + " è terminato");
+                        System.out.println("Lo snapshot " + id + " è terminato\n\n");
                     }
                 } else { //è la prima volta che ricevo il marker id di startSnap (o sono io ad averlo fatto partire)
                     System.out.println("Inizio per la prima volta lo snapshot con id=" + id);
@@ -122,11 +122,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                             saveSnapshot(runningSnapshots.get(id));
                             incomingStatus.remove(id);
                             runningSnapshots.remove(id);
-                            System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)");
+                            System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)\n\n");
                         }
-                    } catch (NotBoundException | RemoteException e) {
-                        e.printStackTrace();
-                    }
+                    } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
                 }
             }
         }
@@ -163,6 +161,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         return temp;
     }
 
+    @Override
     public void initiateSnapshot() {
         String id = clock + "." + getHost();
         startSnapshot(id);
@@ -209,7 +208,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 // se non devo aspettare il marker più da nessuno la restore è terminata
                 if (pendingRestores.isEmpty()) {
                     restoring = false;
-                    System.out.println("Restore terminata!");
+                    System.out.println("Restore terminata!\n\n");
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
@@ -270,17 +269,17 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         new Thread(this::initiateSnapshot).start();
     }
 
-    private void initCrashChecker(){
+    private void resetCrashDetector() {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.TRUE);
-            System.out.println("The snapshot process has been successfully started.");
+            //System.out.println("The process has successfully started.");
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
     public void safeExit() {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.FALSE);
-            System.out.println("The snapshot process has been successfully closed.");
+            System.out.println("The process has been successfully closed");
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
