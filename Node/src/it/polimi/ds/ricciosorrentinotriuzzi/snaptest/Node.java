@@ -48,7 +48,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     //PublicInt Implementation
     @Override
-    public void transfer(String to, Integer amount) throws RemoteException {
+    public synchronized void transfer(String to, Integer amount) throws RemoteException {
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
@@ -64,7 +64,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     }
 
     @Override
-    public void withdraw(String from, Integer amount) throws RemoteException {
+    public synchronized void withdraw(String from, Integer amount) throws RemoteException {
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
@@ -78,6 +78,11 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         } else {
             System.out.println("Destinatario sconosciuto");
         }
+    }
+
+    @Override
+    public synchronized void register(String customer) throws RemoteException {
+        getState().newCustomer(customer);
     }
 
     @Override
