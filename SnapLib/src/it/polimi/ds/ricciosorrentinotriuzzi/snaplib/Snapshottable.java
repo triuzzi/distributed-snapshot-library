@@ -109,19 +109,16 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         for (ConnInt connInt : getOutConn()) {
                             System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
                             SnapInt snapRemInt = ((SnapInt) LocateRegistry
-                                    .getRegistry(connInt.getHost(), connInt.getPort())
-                                    .lookup("SnapInt"));
+                                                            .getRegistry(connInt.getHost(), connInt.getPort())
+                                                            .lookup("SnapInt"));
                             System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snap");
                             new Thread(() -> {
                                 try {
                                     snapRemInt.startSnapshot(id);
-                                } catch (RemoteException e) {
-                                    e.printStackTrace();
-                                }
+                                } catch (RemoteException e) { e.printStackTrace(); }
                             }).start();
                         }
                         //Se ho ricevuto il token dall'unico canale in ingresso
-                        //System.out.println("set empty? "+incomingStatus.get(id).isEmpty());
                         if (incomingStatus.get(id).isEmpty()) {
                             saveSnapshot(runningSnapshots.get(id));
                             incomingStatus.remove(id);
@@ -168,12 +165,10 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         return temp;
     }
 
-
     public void initiateSnapshot() {
         String id = clock + "." + getHost();
         startSnapshot(id);
     }
-
 
     @Override
     public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
@@ -206,9 +201,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                                 ((SnapInt) LocateRegistry
                                         .getRegistry(connInt.getHost(), connInt.getPort())
                                         .lookup("SnapInt")).restore(toRestore.getId());
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+                            } catch (Exception e) { e.printStackTrace(); }
                         }).start();
                     }
                 }
@@ -220,9 +213,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     restoring = false;
                     System.out.println("Restore terminata!");
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            } catch (Exception e) { e.printStackTrace(); }
         }
     }
 

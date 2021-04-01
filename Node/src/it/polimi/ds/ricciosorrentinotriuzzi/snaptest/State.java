@@ -1,19 +1,19 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
-
 import java.io.Serializable;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 public class State implements Serializable {
     Integer balance;
+    private Map<String, Integer> ledger; //map(cliente, saldo)
     private Set<ConnInt> incomingConnections;
     private Set<ConnInt> outgoingConnections;
 
     public State() {
         incomingConnections = new HashSet<>();
         outgoingConnections = new HashSet<>();
+        ledger = new HashMap<>();
         this.balance = 100;
     }
 
@@ -33,12 +33,18 @@ public class State implements Serializable {
         balance -= diff;
     }
 
-    public Set<ConnInt> getIncomingConnections() {
-        return incomingConnections;
+    public void newCustomer(String id) { ledger.putIfAbsent(id, 0); }
+
+    public void sumBalance(String customer, Integer quantity) {
+        ledger.put(customer, ledger.get(customer)+quantity);
     }
 
-    public Set<ConnInt> getOutgoingConnections() {
-        return outgoingConnections;
+    public Integer getCBalance(String customer) {
+        return ledger.get(customer);
     }
+
+    public Set<ConnInt> getIncomingConnections() { return incomingConnections; }
+
+    public Set<ConnInt> getOutgoingConnections() { return outgoingConnections; }
 
 }

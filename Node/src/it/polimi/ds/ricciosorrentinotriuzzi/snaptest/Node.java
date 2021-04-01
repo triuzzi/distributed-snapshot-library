@@ -30,17 +30,16 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         }
     }
 
-
     private void joinNetwork() throws Exception {
         System.out.println("Joining the network...");
         SubnodeConfiguration conf = config.configurationAt("incoming");
         Connection nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
-        state.getIncomingConnections().add(nodeConn);
+        getInConn().add(nodeConn);
         PublicInt node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
         node.addConn(true, getHost(), getPort(), getName());
         conf = config.configurationAt("outgoing");
         nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
-        state.getOutgoingConnections().add(nodeConn);
+        getOutConn().add(nodeConn);
         node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
         node.addConn(false, getHost(), getPort(), getName());
         applyNetworkChange();
@@ -49,39 +48,46 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     //PublicInt Implementation
     @Override
-    public void increase(Integer diff) {
+    public void transfer(String to, Integer amount) throws RemoteException {
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
         } catch (ServerNotActiveException e) { }
-        if (shouldDiscard(sender)) { System.out.println("Increase "+diff+" scartata"); return; }
-        addMessage(sender, new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
-        getState().increase(diff);
-        System.out.println("Increase di "+diff);
-        System.out.println("Balance: "+getState().getBalance());
+        if (shouldDiscard(sender)) { System.out.println("Trasferimento di "+amount+" a "+to+" scartato"); return; }
+        addMessage(sender, new Message("transfer", new Class<?>[]{String.class, Integer.class}, new Object[]{to, amount}));
+        if (getState().getCBalance(to) != null) {
+            getState().sumBalance(to, amount);
+            System.out.println("Trasferimento di "+amount+" a "+to+" effettuato. Nuovo saldo: "+getState().getCBalance(to));
+        } else {
+            System.out.println("Destinatario sconosciuto");
+        }
     }
 
     @Override
-    public void decrease(Integer diff) {
+    public void withdraw(String from, Integer amount) throws RemoteException {
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
         } catch (ServerNotActiveException e) { }
-        if (shouldDiscard(sender)) { System.out.println("Decrease di "+diff+" scartata"); return; }
-        addMessage(sender, new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
-        getState().decrease(diff);
-        System.out.println("Decrease di "+diff);
-        System.out.println("Balance: "+getState().getBalance());
+        if (shouldDiscard(sender)) { System.out.println("Prelievo di "+amount+" da "+from+" scartato"); return; }
+        addMessage(sender, new Message("withdraw", new Class<?>[]{String.class, Integer.class}, new Object[]{from, amount}));
+        Integer balance = getState().getCBalance(from);
+        if (balance != null && balance >= amount) {
+            getState().sumBalance(from, -amount);
+            System.out.println("Prelievo di "+amount+" da "+from+" effettuato. Nuovo saldo: "+getState().getCBalance(from));
+        } else {
+            System.out.println("Destinatario sconosciuto");
+        }
     }
 
     @Override
     public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
-        (toOutgoing ? state.getOutgoingConnections() : state.getIncomingConnections()).add(new Connection(host, port, name));
+        (toOutgoing ? getOutConn() : getInConn()).add(new Connection(host, port, name));
     }
 
     @Override
     public void removeConn(boolean fromOutgoing, String host) throws RemoteException {
-        (fromOutgoing ? state.getOutgoingConnections() : state.getIncomingConnections()).removeIf(o -> o.getHost().equals(host));
+        (fromOutgoing ? getOutConn() : getInConn()).removeIf(o -> o.getHost().equals(host));
         try {
             RemoteServer.getClientHost();
             applyNetworkChange(); //se è una chiamata remota avvia lo snapshot
@@ -157,7 +163,34 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     public Integer getPort() { return port; }
 }
 
+
 /*
+
+    @Override
+    public void increase(Integer diff) {
+        String sender = null;
+        try {
+            sender = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) { }
+        if (shouldDiscard(sender)) { System.out.println("Increase "+diff+" scartata"); return; }
+        addMessage(sender, new Message("increase", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().increase(diff);
+        System.out.println("Increase di "+diff);
+        System.out.println("Balance: "+getState().getBalance());
+    }
+
+    @Override
+    public void decrease(Integer diff) {
+        String sender = null;
+        try {
+            sender = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) { }
+        if (shouldDiscard(sender)) { System.out.println("Decrease di "+diff+" scartata"); return; }
+        addMessage(sender, new Message("decrease", new Class<?>[]{Integer.class}, new Integer[]{diff}));
+        getState().decrease(diff);
+        System.out.println("Decrease di "+diff);
+        System.out.println("Balance: "+getState().getBalance());
+    }
 
     List<HierarchicalConfiguration> incomingConn =  config.configurationsAt("incoming/conn");
     for (HierarchicalConfiguration hc : incomingConn) {

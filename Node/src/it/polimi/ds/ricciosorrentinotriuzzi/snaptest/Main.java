@@ -2,7 +2,7 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import org.apache.commons.configuration.XMLConfiguration;
 
-public class Main2 {
+public class Main {
     public static void main(String[] args) throws Exception {
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
