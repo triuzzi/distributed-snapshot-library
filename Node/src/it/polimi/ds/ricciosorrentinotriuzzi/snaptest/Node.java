@@ -41,9 +41,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         nodeConn = new Connection(conf.getString("host"),conf.getInt("port"),conf.getString("name"));
         getOutConn().add(nodeConn);
         node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
-        node.addConn(false, getHost(), getPort(), getName());
-        ((SnapInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("SnapInt")).initiateSnapshot();
-        //applyNetworkChange();
+        this.setClock(node.addConn(false, getHost(), getPort(), getName()));
+        applyNetworkChange();
         System.out.println("Ora sono parte della rete!");
     }
 
@@ -87,9 +86,10 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     }
 
     @Override
-    public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
+    public Long addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
         (toOutgoing ? getOutConn() : getInConn()).add(new Connection(host, port, name));
         System.out.println("Aggiungo "+host+" negli "+(toOutgoing ? "outgoing" : "incoming"));
+        return this.getClock();
     }
 
     @Override

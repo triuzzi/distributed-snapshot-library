@@ -32,7 +32,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         Registry r;
         try {
             r = LocateRegistry.createRegistry(port);
-            System.out.println(r);
+            //System.out.println(r);
         } catch (RemoteException e) {
             r = LocateRegistry.getRegistry(port);
         }
@@ -47,6 +47,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         resetCrashDetector();
     }
 
+    public void setClock(long clock) { this.clock = clock; }
+    public long getClock() { return clock; }
     public abstract S getState();
     public abstract String getHost();
     public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
@@ -161,7 +163,6 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         return temp;
     }
 
-    @Override
     public void initiateSnapshot() {
         String id = clock + "." + getHost();
         startSnapshot(id);
