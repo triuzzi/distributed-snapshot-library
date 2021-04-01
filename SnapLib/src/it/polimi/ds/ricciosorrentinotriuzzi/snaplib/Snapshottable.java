@@ -27,7 +27,6 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     //private Registry registry = LocateRegistry.createRegistry(1099);
 
-    //TODO VEDERE SE VA CAMBIANDO
     public Snapshottable(Integer port) throws RemoteException, AlreadyBoundException {
         super(port);
         Registry r;
@@ -133,9 +132,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         }
     }
 
-    //TODO DA CAMBIARE
     //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
-    public synchronized void addMessage(String sender, M message) {
+    public void addMessage(String sender, M message) {
         for (Snapshot<S, M> snapshot : runningSnapshots.values()) {
             if (incomingStatus.get(snapshot.getId()).contains(sender))
                 snapshot.addMessage(sender, message);
@@ -231,8 +229,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
-    //TODO Potrebbe restituire null se il nodo che si è connesso non effettua lo snapshot in tempo prima che
-    // venga chiamata la restore
+    // Non può restituire null perché dopo la connessione un nodo avrà sempre almeno uno snapshot,
+    // che è quello fatto prtire alla connessione
     @SuppressWarnings("unchecked")
     private Snapshot<S, M> readSnapshot(String id) {
         Snapshot<S, M> toReturn = null;
