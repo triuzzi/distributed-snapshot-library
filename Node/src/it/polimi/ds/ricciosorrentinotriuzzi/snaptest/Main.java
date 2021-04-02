@@ -60,7 +60,7 @@ public class Main {
                 }
             } else if (selection.equalsIgnoreCase("a")){
                 self.initiateSnapshot();
-            } else if (selection.equalsIgnoreCase("e")){
+            } else if (selection.equalsIgnoreCase("v")){
                 self.transferMoney("Giancarlo", "Intesa", "Vincenzo", 3);
             }
             else if (selection.equalsIgnoreCase("e")){
