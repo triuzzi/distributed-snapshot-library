@@ -82,9 +82,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     public void transferLedger(Map<String, Integer> ledgerToImport) throws RemoteException {
         Map<String, Integer> currentLedger = this.getState().getLedger();
         for(String customer : ledgerToImport.keySet())
-            currentLedger.put(customer, ledgerToImport.get(customer) + (currentLedger.containsKey(customer) ? currentLedger.get(currentLedger.get(customer)) : 0));
+            currentLedger.put(customer, ledgerToImport.get(customer) + (currentLedger.getOrDefault(customer, 0)));
     }
-
 
     @Override
     public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {

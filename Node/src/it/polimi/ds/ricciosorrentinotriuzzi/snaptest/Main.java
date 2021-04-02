@@ -1,5 +1,6 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
 import java.util.Scanner;
 
@@ -50,7 +51,10 @@ public class Main {
             } else if (selection.equalsIgnoreCase("g")){
                 self.transferMoney(self.getDefaultCustomer(), "Paypal", "Giancarlo", 3);
             } else if (selection.equalsIgnoreCase("x")){
-                //chiudi la filiale
+                for(ConnInt c: self.getState().getIncomingConnections())
+                    self.disconnectFrom(c.getHost(), c.getPort(), false);
+                for(ConnInt c: self.getState().getOutgoingConnections())
+                    self.disconnectFrom(c.getHost(), c.getPort(), true)
                 self.safeExit();
                 System.exit(1);
             }
