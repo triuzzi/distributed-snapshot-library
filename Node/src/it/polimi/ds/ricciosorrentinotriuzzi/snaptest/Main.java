@@ -17,8 +17,7 @@ public class Main {
 
         Thread.sleep(2500);
         Scanner scan = new Scanner(System.in);
-        String exitCondition = "N";
-        while (!exitCondition.equalsIgnoreCase("y")) {
+        while (true) {
             System.out.println("\n\n" +
                     "Cosa vuoi fare?\n" +
                     " - Snapshot -> premi A \n" +
@@ -27,8 +26,10 @@ public class Main {
                     " - Bonifico a Giancarlo da 3€ -> premi G \n" +
                     " - Bonifico a Vincenzo da 4€ -> premi V \n" +
                     " - Saldo di tutti i client -> premi S \n" +
+                    " - Modifica sleep snapshot -> premi 1 \n" +
+                    " - Modifica sleep restore -> premi 2 \n" +
                     " - Chiudi la filiale -> premi X \n" +
-                    "La tua scelta: ");
+                    "La tua scelta:");
             String selection = scan.next();
 
             if (selection.equalsIgnoreCase("b")) {
@@ -39,7 +40,7 @@ public class Main {
                 System.out.println("Inserisci l'identificativo del destinatario");
                 String receiver = scan.next();
                 System.out.println("Inserisci la somma da trasferire");
-                Integer toTransfer = Integer.valueOf(scan.next());
+                Integer toTransfer = Integer.parseInt(scan.next());
                 self.transferMoney(customer, bank, receiver, toTransfer);
             } else if (selection.equalsIgnoreCase("a")){
                 self.initiateSnapshot();
@@ -49,6 +50,18 @@ public class Main {
                 self.transferMoney(self.getDefaultCustomer(), "Hype", "Emanuele", 2);
             } else if (selection.equalsIgnoreCase("g")){
                 self.transferMoney(self.getDefaultCustomer(), "Paypal", "Giancarlo", 3);
+            } else if (selection.equalsIgnoreCase("1")){
+                System.out.println("Inserisci il valore in secondi");
+                self.sleepSnapshot = Integer.parseInt(scan.next())*1000;
+            } else if (selection.equalsIgnoreCase("2")){
+                System.out.println("Inserisci il valore in secondi");
+                self.sleepRestore = Integer.parseInt(scan.next())*1000;
+            } else if (selection.equalsIgnoreCase("s")){
+                System.out.println("\n\nConti aggiornati");
+                for (String name : self.getState().getLedger().keySet()) {
+                    System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+                }
+                System.out.println("\n\n");
             } else if (selection.equalsIgnoreCase("x")){
                 //chiudi la filiale
                 self.safeExit();

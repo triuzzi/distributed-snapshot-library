@@ -171,31 +171,19 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
             System.out.println("Non è stato trovato il cliente " + customer);
             return;
         }
-        PublicInt receiverBank = null;
         if (getCBalance(customer) >= amount) {
             for (ConnInt connection : getOutConn())
                 if (connection.getName().equalsIgnoreCase(receiverBankID)) {
                     try {
-                        receiverBank = (PublicInt) LocateRegistry
+                        PublicInt receiverBank = (PublicInt) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("PublicInt");
+                        System.out.println("Invio il trasferimento");
+                        receiverBank.transfer(receiver, amount);
+                        state.sumBalance(customer, -amount);
                     } catch (Exception e) {
                         e.printStackTrace();
-                        System.out.println("La banca " + receiverBankID + " non è disponibie");
-                    }
-
-                    if (receiverBank != null) {
-                        try {
-                            receiverBank.transfer(receiver, amount);
-                            state.sumBalance(customer, -amount);
-                            System.out.println("Invio il trasferimento");
-
-                        } catch (RemoteException e) {
-                            e.printStackTrace();
-                            System.out.println("La banca " + receiverBankID + " non è disponibie");
-                        }
-                    } else {
-                        System.out.println("I dati del destinatario inseriti non sono corretti");
+                        System.out.println("La banca " + receiverBankID + " non è disponibile");
                     }
                 }
         } else {
