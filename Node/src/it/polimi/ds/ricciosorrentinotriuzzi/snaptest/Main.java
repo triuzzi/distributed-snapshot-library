@@ -83,6 +83,10 @@ public class Main {
                             System.out.println("La banca " + bank + " non è disponibile");
                         }
                     }
+                for(ConnInt c: self.getState().getIncomingConnections())
+                    self.disconnectFrom(c.getHost(), c.getPort(), false);
+                for(ConnInt c: self.getState().getOutgoingConnections())
+                    self.disconnectFrom(c.getHost(), c.getPort(), true)
                 self.safeExit();
                 System.exit(1);
             }

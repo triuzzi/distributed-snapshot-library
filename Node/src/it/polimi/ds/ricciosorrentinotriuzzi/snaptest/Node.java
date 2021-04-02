@@ -85,7 +85,6 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
             currentLedger.put(customer, ledgerToImport.get(customer) + (currentLedger.getOrDefault(customer, 0)));
     }
 
-
     @Override
     public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
         (toOutgoing ? getOutConn() : getInConn()).add(new Connection(host, port, name));
