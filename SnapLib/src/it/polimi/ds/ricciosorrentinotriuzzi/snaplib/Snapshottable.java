@@ -14,6 +14,10 @@ import java.util.stream.Collectors;
 public abstract class Snapshottable<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt {
     //metodi abstract che mi passino il riferimento (siamo sicuri di volerlo fare? Ci fidiamo dell'implementazione del metodo?)
 
+    //variabili da cambiare per i test, non sarebbero incluse nella libreria
+    public int sleepSnapshot = 0;
+    public int sleepRestore = 0;
+
     //map(idSnap, set(inHost)) se inHost è presente, vuol dire che non ho ancora ricevuto il marker da lui)
     private Map<String, Set<String>> incomingStatus;
     private Map<String, Snapshot<S, M>> runningSnapshots; //map(idSnap, Snap)
@@ -45,13 +49,14 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         System.out.println("SnapLib configured");
         if (checkCrash()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
         resetCrashDetector();
+        //non c'è un thread periodico solo per la dimostrazione
     }
 
     @Override
     public long getClock() { return clock; }
 
 
-    protected void joinNetwork(String withHost, Integer port) throws Exception { //TODO cambia nome (come per applyNetChange)
+    protected void joinNetwork(String withHost, Integer port) throws Exception {
         clock = ((SnapInt) LocateRegistry
                 .getRegistry(withHost, port)
                 .lookup("SnapInt")).getClock();
@@ -75,7 +80,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             System.out.println("Snapshot iniziato di mia iniziativa");
         }
 
-        //Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha già terminato la sua di restore,
+        //Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha
+        // già terminato la sua di restore,
         // in quando il suo stato sarà consistente con quello di cui ha fatto la restore. Tutti gli altri vanno ignorati.
         //Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
         //faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
@@ -124,8 +130,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snap");
                         new Thread(() -> {
                             try {
+                                Thread.sleep(sleepSnapshot);
                                 snapRemInt.startSnapshot(id);
-                            } catch (RemoteException e) { e.printStackTrace(); }
+                            } catch (RemoteException | InterruptedException e) { e.printStackTrace(); }
                         }).start();
                     }
                     //Se ho ricevuto il token dall'unico canale in ingresso
@@ -210,6 +217,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 Snapshot<S, M> finalToRestore = toRestore;
                 new Thread(() -> {
                     try {
+                        Thread.sleep(sleepRestore);
                         ((SnapInt) LocateRegistry
                                 .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt")).restore(finalToRestore.getId());

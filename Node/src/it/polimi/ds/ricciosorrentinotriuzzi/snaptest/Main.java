@@ -33,32 +33,44 @@ public class Main {
 
         String exitCondition = "N";
         while (!exitCondition.equalsIgnoreCase("y")) {
-            System.out.println("Inserisci il tuo identificativo");
-            String customer = scan.next();
+            System.out.println("Seleziona:\n-Snapshot -> premi A\n-Bonifico generico -> premi B");
+            System.out.println("-Bonifico Emanuele 2 €-> premi E\n-Bonifico Vincenzo da 3€ -> premi V");
 
-            System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
-            String bank = scan.next();
+            String selection = scan.next();
 
-            System.out.println("Inserisci l'identificativo del destinatario");
-            String receiver = scan.next();
+            if (selection.equalsIgnoreCase("b")) {
 
-            System.out.println("Inserisci la somma da trasferire");
-            Integer toTransfer = Integer.valueOf(scan.next());
-            PublicInt recieverBank = null;
+                System.out.println("Inserisci il tuo identificativo");
+                String customer = scan.next();
 
-            self.transferMoney(customer, bank, receiver, toTransfer);
+                System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
+                String bank = scan.next();
 
-            System.out.println("Conti aggiornati");
-            for (String name: self.getState().getLedger().keySet()) {
-                System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+                System.out.println("Inserisci l'identificativo del destinatario");
+                String receiver = scan.next();
+
+                System.out.println("Inserisci la somma da trasferire");
+                Integer toTransfer = Integer.valueOf(scan.next());
+
+                self.transferMoney(customer, bank, receiver, toTransfer);
+
+                System.out.println("Conti aggiornati");
+                for (String name : self.getState().getLedger().keySet()) {
+                    System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+                }
+            } else if (selection.equalsIgnoreCase("a")){
+                self.initiateSnapshot();
+            } else if (selection.equalsIgnoreCase("e")){
+                self.transferMoney("Giancarlo", "Intesa", "Vincenzo", 3);
             }
-
+            else if (selection.equalsIgnoreCase("e")){
+                self.transferMoney("Giancarlo", "Hype", "Emanuele", 2);
+            }
+            Thread.sleep(2500);
             do {
                 System.out.println("Vuoi chiudere l'applicazione? Y/N");
                 exitCondition = scan.next(); //qui il programma attende l'immissione dei dati
             } while (!exitCondition.equalsIgnoreCase("y") && !exitCondition.equalsIgnoreCase("n"));
-
-
         }
         self.safeExit();
 

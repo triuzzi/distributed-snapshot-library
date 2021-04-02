@@ -54,7 +54,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     //PublicInt Implementation
     @Override
     public synchronized void transfer(String to, Integer amount) throws RemoteException {
-        String sender = null;
+        String sender;
         try {
             sender = RemoteServer.getClientHost();
             if (shouldDiscard(sender)) { System.out.println("Trasferimento di "+amount+" a "+to+" scartato"); return; }
@@ -106,7 +106,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     @Override
     public void restoreSnapshot(Snapshot<State,Message> snapshot) {
-        this.state = snapshot.getState();
+        synchronized (this) {
+            this.state = snapshot.getState();
+        }
         for (Message message : snapshot.getMessages()) {
             try {
                 Method method = Node.class.getMethod(message.getMethodName(), message.getParameterTypes());
