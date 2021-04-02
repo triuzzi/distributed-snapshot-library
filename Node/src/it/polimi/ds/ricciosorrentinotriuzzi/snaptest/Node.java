@@ -4,6 +4,7 @@ import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.*;
 import org.apache.commons.configuration.*;
 import java.io.*;
 import java.lang.reflect.Method;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.server.RemoteServer;
@@ -45,8 +46,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         node = (PublicInt) LocateRegistry.getRegistry(nodeConn.getHost(), nodeConn.getPort()).lookup("PublicInt");
         node.addConn(false, getHost(), getPort(), getName());
         //sincronizza clock col nodo in uscita
-        syncClock(nodeConn.getHost(), nodeConn.getPort());
-        applyNetworkChange(); //avvia snap
+        super.joinNetwork(nodeConn.getHost(), nodeConn.getPort());
+        //applyNetworkChange(); //avvia snap viene fatto dalla super.join ora
         System.out.println("Ora sono parte della rete!");
     }
 
@@ -59,7 +60,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         } catch (ServerNotActiveException e) { }
         if (shouldDiscard(sender)) { System.out.println("Trasferimento di "+amount+" a "+to+" scartato"); return; }
         addMessage(sender, new Message("transfer", new Class<?>[]{String.class, Integer.class}, new Object[]{to, amount}));
-        if (getState().getCBalance(to) != null) {
+        if (getState().getCBalance(to) != null) { //problema: se non c'è, abbiamo perso dei soldi
             getState().sumBalance(to, amount);
             System.out.println("Trasferimento di "+amount+" a "+to+" effettuato. Nuovo saldo: "+getState().getCBalance(to));
         } else {
@@ -114,7 +115,6 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         }
         System.out.println(toPrint);
     }
-
 
     //Snapshottable Implementation
     @Override
@@ -172,6 +172,65 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     public String getName() { return name; }
     public Integer getPort() { return port; }
+
+    //metodi interfaccia pubblica
+    public Integer getBalance() {
+        return state.getBalance();
+    }
+
+    public void setBalance(Integer balance) { state.setBalance(balance);}
+
+    public void increase(Integer diff) {
+        state.increase(diff);
+    }
+
+    public void decrease(Integer diff) {
+        state.decrease(diff);
+    }
+
+    public void newCustomer(String id) { state.newCustomer(id); }
+
+    public void sumBalance(String customer, Integer quantity) {
+        state.sumBalance(customer, quantity);
+    }
+
+    public Integer getCBalance(String customer) {
+        return state.getCBalance(customer);
+    }
+
+    public void transfer(String customer, String bank, String receiver, Integer amount) {
+        if (getCBalance(customer) == null) {
+            System.out.println("Non è stato trovato il cliente " + customer);
+            return;
+        }
+        PublicInt recieverBank = null;
+        if (getCBalance(customer) >= amount) {
+            for (ConnInt connection : getOutConn())
+                if (connection.getName().equalsIgnoreCase(bank)) {
+                    try {
+                        recieverBank = (PublicInt) LocateRegistry
+                                .getRegistry(connection.getHost(), connection.getPort())
+                                .lookup("PublicInt");
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        System.out.println("La banca " + bank + " non è disponibie");
+                    }
+
+                    if (recieverBank != null) {
+                        try {
+                            recieverBank.transfer(receiver, amount);
+                        } catch (RemoteException e) {
+                            e.printStackTrace();
+                            System.out.println("La banca " + bank + " non è disponibie");
+                        }
+                    } else {
+                        System.out.println("I dati del destinatario inseriti non sono corretti");
+                    }
+                } else {
+                    System.out.println("Non hai abbastanza fondi per trasferire l'importo selezionato\nIl tuo saldo è " + getCBalance(customer));
+                }
+        }
+    }
 }
 
 

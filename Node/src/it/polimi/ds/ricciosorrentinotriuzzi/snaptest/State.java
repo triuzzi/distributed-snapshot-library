@@ -17,6 +17,7 @@ public class State implements Serializable {
         this.balance = 100;
     }
 
+
     public Integer getBalance() {
         return balance;
     }

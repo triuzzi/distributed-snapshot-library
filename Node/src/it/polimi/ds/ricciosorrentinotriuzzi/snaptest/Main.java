@@ -1,14 +1,61 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
+
+import java.rmi.registry.LocateRegistry;
+import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
+
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
+        Scanner scan = new Scanner(System.in);
         Node self = new Node(config);
+
         System.out.println("Server ready\n");
+
+        //CAPIRE NFT, da regalare ai propri outgoing
+
+
+        String exitCondition = "N";
+        while (!exitCondition.equalsIgnoreCase("y")) {
+            System.out.println("Inserisci il tuo identificativo");
+            String customer = scan.next();
+
+            System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
+            String bank = scan.next();
+
+            System.out.println("Inserisci l'identificativo del destinatario");
+            String receiver = scan.next();
+
+            System.out.println("Inserisci la somma da trasferire");
+            Integer toTransfer = Integer.valueOf(scan.next());
+            PublicInt recieverBank = null;
+
+            self.transfer(customer, bank, receiver, toTransfer);
+
+            do {
+                System.out.println("Vuoi chiudere l'applicazione? Y/N");
+                exitCondition = scan.next(); //qui il programma attende l'immissione dei dati
+            } while (!exitCondition.equalsIgnoreCase("y") && !exitCondition.equalsIgnoreCase("n"));
+        }
+        self.safeExit();
+
+
+        //chi sei? Seleziona il tuo nome.
+        //che vuoi fare? Prelevare, versare o trasferire?
+
+            /* Problema: si viola la consistenza del sistema, non è più a somma costante
+            //prelievo: togli sia dal conto che dal balance
+            //versamento: aggiungi a entrambi
+            */
+
+        //trasferimento: Dimmi la banca a cui vuoi traferire. Dimmi il cliente a cui vuoi trasferire. Dimmmi la somma che vuoi trasferire.
+
+        //System.out.println("Mi connetto a Vincenzo");
 
         /*Thread.sleep(10000);
         self.connectTo("87.20.154.215",1099,"Gianc", true);
@@ -32,7 +79,7 @@ public class Main {
         }*/
 
         //Thread.sleep(45_000);
-        self.safeExit();
+
     }
 }
 

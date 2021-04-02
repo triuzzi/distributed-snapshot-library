@@ -51,10 +51,11 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     public long getClock() { return clock; }
 
 
-    public void syncClock(String withHost, Integer port) throws Exception {
+    protected void joinNetwork(String withHost, Integer port) throws Exception { //TODO cambia nome (come per applyNetChange)
         clock = ((SnapInt) LocateRegistry
                 .getRegistry(withHost, port)
                 .lookup("SnapInt")).getClock();
+        applyNetworkChange();
     }
 
     public abstract S getState();
@@ -65,8 +66,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
 
     @Override
-    public void startSnapshot(String id) {
-        synchronized (this) {
+    public synchronized void startSnapshot(String id) {
+
             String markerReceivedFrom = null;
             try {
                 markerReceivedFrom = RemoteServer.getClientHost();
@@ -137,7 +138,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
                 }
             }
-        }
+
     }
 
     //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
@@ -177,8 +178,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     }
 
     @Override
-    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
-        synchronized (this) {
+    public synchronized void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
             String tokenReceivedFrom = null;
@@ -221,7 +221,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 }
             } catch (Exception e) { e.printStackTrace(); }
         }
-    }
+
 
     private Set<String> incomingInit() {
         Set<String> toRet = new HashSet<>();
