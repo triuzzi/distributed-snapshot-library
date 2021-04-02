@@ -1,80 +1,67 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
-import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
-import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
-
-import java.rmi.registry.LocateRegistry;
-import java.util.List;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
-        Scanner scan = new Scanner(System.in);
         Node self = new Node(config);
-
         System.out.println("Server ready\n");
 
-        XMLConfiguration ledgers = new XMLConfiguration("ledgers.xml");
-
-        List<HierarchicalConfiguration> users =  ledgers.configurationsAt("user");
-        for (HierarchicalConfiguration hc : users) {
-            self.getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
-        }
-
         for (String name: self.getState().getLedger().keySet()) {
-            System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+            System.out.println("User: " + name + ", balance " + self.getState().getLedger().get(name));
         }
 
         Thread.sleep(2500);
-
+        Scanner scan = new Scanner(System.in);
         String exitCondition = "N";
         while (!exitCondition.equalsIgnoreCase("y")) {
-            System.out.println("Seleziona:\n-Snapshot -> premi A\n-Bonifico generico -> premi B");
-            System.out.println("-Bonifico Emanuele 2 €-> premi E\n-Bonifico Vincenzo da 3€ -> premi V");
-
+            System.out.println("\n\n" +
+                    "Cosa vuoi fare?\n" +
+                    " - Snapshot -> premi A \n" +
+                    " - Bonifico generico -> premi B \n" +
+                    " - Bonifico a Emanuele da 2€ -> premi E \n" +
+                    " - Bonifico a Giancarlo da 3€ -> premi G \n" +
+                    " - Bonifico a Vincenzo da 4€ -> premi V \n" +
+                    " - Saldo di tutti i client -> premi S \n" +
+                    " - Chiudi la filiale -> premi X \n" +
+                    "La tua scelta: ");
             String selection = scan.next();
 
             if (selection.equalsIgnoreCase("b")) {
-
                 System.out.println("Inserisci il tuo identificativo");
                 String customer = scan.next();
-
                 System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
                 String bank = scan.next();
-
                 System.out.println("Inserisci l'identificativo del destinatario");
                 String receiver = scan.next();
-
                 System.out.println("Inserisci la somma da trasferire");
                 Integer toTransfer = Integer.valueOf(scan.next());
-
                 self.transferMoney(customer, bank, receiver, toTransfer);
-
-
             } else if (selection.equalsIgnoreCase("a")){
                 self.initiateSnapshot();
             } else if (selection.equalsIgnoreCase("v")){
-                self.transferMoney("Giancarlo", "Intesa", "Vincenzo", 3);
-            }
-            else if (selection.equalsIgnoreCase("e")){
-                self.transferMoney("Giancarlo", "Hype", "Emanuele", 2);
+                self.transferMoney(self.getDefaultCustomer(), "Intesa", "Vincenzo", 4);
+            } else if (selection.equalsIgnoreCase("e")){
+                self.transferMoney(self.getDefaultCustomer(), "Hype", "Emanuele", 2);
+            } else if (selection.equalsIgnoreCase("g")){
+                self.transferMoney(self.getDefaultCustomer(), "Paypal", "Giancarlo", 3);
+            } else if (selection.equalsIgnoreCase("x")){
+                //chiudi la filiale
+                self.safeExit();
+                System.exit(1);
             }
             Thread.sleep(2500);
-            System.out.println("Conti aggiornati");
+            System.out.println("\n\nConti aggiornati");
             for (String name : self.getState().getLedger().keySet()) {
                 System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
             }
-            do {
-                System.out.println("Vuoi chiudere l'applicazione? Y/N");
-                exitCondition = scan.next(); //qui il programma attende l'immissione dei dati
-            } while (!exitCondition.equalsIgnoreCase("y") && !exitCondition.equalsIgnoreCase("n"));
+            System.out.println("\n\n");
         }
-        self.safeExit();
+
 
 
         //chi sei? Seleziona il tuo nome.

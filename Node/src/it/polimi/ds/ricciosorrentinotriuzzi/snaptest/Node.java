@@ -15,6 +15,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     private State state;
     final private String host;
     final private String name;
+    final private String defaultCustomer;
     final private Integer port;
     final private XMLConfiguration config;
 
@@ -24,10 +25,18 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         host = config.getString("host");
         name = config.getString("name");
         port = config.getInt("port");
+        defaultCustomer = config.getString("defaultCustomer");
         state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-        if (!config.getBoolean("newNetwork",false)) {
-            joinNetwork();
+        if (!checkCrash()) {
+            if (!config.getBoolean("newNetwork", false)) {
+                joinNetwork();
+            }
+            XMLConfiguration ledgers = new XMLConfiguration("ledgers.xml");
+            List<HierarchicalConfiguration> users =  ledgers.configurationsAt("user");
+            for (HierarchicalConfiguration hc : users) {
+                getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
+            }
         }
     }
 
@@ -51,6 +60,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         System.out.println("Ora sono parte della rete!");
     }
 
+
     //PublicInt Implementation
     @Override
     public synchronized void transfer(String to, Integer amount) throws RemoteException {
@@ -67,8 +77,6 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
             System.out.println("Destinatario sconosciuto");
         }
     }
-
-
 
 
     @Override
@@ -96,6 +104,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         }
         System.out.println(toPrint);
     }
+
+
 
     //Snapshottable Implementation
     @Override
@@ -125,7 +135,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
 
 
-    //Funzioni di NodeImpl
+    //Funzioni interne di Node
 
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean connectTo(String host, Integer port, String name, boolean isOutgoingFromMe) {
@@ -151,12 +161,6 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         } catch (Exception e) { e.printStackTrace(); return false; }
         return true;
     }
-
-
-    public String getName() { return name; }
-    public Integer getPort() { return port; }
-
-    //metodi interfaccia pubblica
 
     public Integer getCBalance(String customer) {
         return state.getCBalance(customer);
@@ -194,10 +198,15 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
                         System.out.println("I dati del destinatario inseriti non sono corretti");
                     }
                 }
-        }else {
+        } else {
             System.out.println("Non hai abbastanza fondi per trasferire l'importo selezionato\nIl tuo saldo è " + getCBalance(customer));
         }
     }
+
+    public String getName() { return name; }
+    public Integer getPort() { return port; }
+    public String getDefaultCustomer() { return defaultCustomer; }
+
 }
 
 

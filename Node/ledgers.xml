@@ -1,27 +1,19 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <ledgers>
     <user>
-        <name>
-            Giancarlo
-        </name>
-        <balance>
-            5
-        </balance>
+        <name>Alessandro</name>
+        <balance>100</balance>
     </user>
     <user>
-        <name>
-            Krukko
-        </name>
-        <balance>
-            22
-        </balance>
+        <name>Vincenzo</name>
+        <balance>200</balance>
     </user>
     <user>
-        <name>
-            Lia
-        </name>
-        <balance>
-            33
-        </balance>
+        <name>Antonella</name>
+        <balance>300</balance>
+    </user>
+    <user>
+        <name>Giovanni</name>
+        <balance>400</balance>
     </user>
 </ledgers>

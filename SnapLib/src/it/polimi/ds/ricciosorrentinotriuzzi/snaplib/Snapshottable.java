@@ -306,7 +306,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
-    private boolean checkCrash() {
+    public boolean checkCrash() {
         try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
             return (boolean) objectIn.readObject();
         } catch (Exception ex) { return false; }
