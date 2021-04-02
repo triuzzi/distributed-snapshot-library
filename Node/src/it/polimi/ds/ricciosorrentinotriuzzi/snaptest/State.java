@@ -17,6 +17,9 @@ public class State implements Serializable {
         this.balance = 100;
     }
 
+    public Map<String, Integer> getLedger() {
+        return ledger;
+    }
 
     public Integer getBalance() {
         return balance;
@@ -35,6 +38,8 @@ public class State implements Serializable {
     }
 
     public void newCustomer(String id) { ledger.putIfAbsent(id, 0); }
+
+    public void newCustomer(String id, Integer initialBalance) { ledger.putIfAbsent(id, initialBalance); }
 
     public void sumBalance(String customer, Integer quantity) {
         ledger.put(customer, ledger.get(customer)+quantity);

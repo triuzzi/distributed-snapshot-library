@@ -1,9 +1,11 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
+import org.apache.commons.configuration.HierarchicalConfiguration;
 import org.apache.commons.configuration.XMLConfiguration;
 
 import java.rmi.registry.LocateRegistry;
+import java.util.List;
 import java.util.Scanner;
 
 public class Main {
@@ -18,6 +20,17 @@ public class Main {
         System.out.println("Server ready\n");
 
         //CAPIRE NFT, da regalare ai propri outgoing
+        XMLConfiguration ledgers = new XMLConfiguration("ledgers.xml");
+
+        List<HierarchicalConfiguration> users =  ledgers.configurationsAt("user");
+        for (HierarchicalConfiguration hc : users) {
+            self.getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
+        }
+
+       //theta(e^n)
+        for (String name: self.getState().getLedger().keySet()) {
+            System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+        }
 
 
         String exitCondition = "N";

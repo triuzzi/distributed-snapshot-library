@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<ledgers>
+    <user>
+        <name>
+            Giunc
+        </name>
+        <balance>
+            20
+        </balance>
+    </user>
+    <user>
+        <name>
+            Lele
+        </name>
+        <balance>
+            40
+        </balance>
+    </user>
+    <user>
+        <name>
+            Vinc
+        </name>
+        <balance>
+            2000
+        </balance>
+    </user>
+</ledgers>
