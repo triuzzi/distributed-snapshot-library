@@ -26,9 +26,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         name = config.getString("name");
         port = config.getInt("port");
         defaultCustomer = config.getString("defaultCustomer");
-        state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-        if (!hasCrashed()) {
+        if (state == null) { //se non è stata fatta la restore devo inizializzare tutto
+            state = new State();
             if (!config.getBoolean("newNetwork", false)) {
                 joinNetwork();
             }
@@ -38,7 +38,6 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
                 getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
             }
         }
-        resetCrashDetector();
     }
 
     private void joinNetwork() throws Exception {
@@ -114,10 +113,10 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     }
 
     @Override
-    public void removeConn(boolean fromOutgoing, String host, boolean shouldStartSnapshot) throws RemoteException {
+    public void removeConn(boolean fromOutgoing, String host, boolean isFinalNetworkChange) throws RemoteException {
         (fromOutgoing ? getOutConn() : getInConn()).removeIf(o -> o.getHost().equals(host));
         System.out.println("Rimuovo "+host+" dagli "+(fromOutgoing ? "outgoing" : "incoming"));
-        if (shouldStartSnapshot) {
+        if (isFinalNetworkChange) {
             try {
                 RemoteServer.getClientHost();
                 applyNetworkChange(); //se è una chiamata remota avvia lo snapshot
