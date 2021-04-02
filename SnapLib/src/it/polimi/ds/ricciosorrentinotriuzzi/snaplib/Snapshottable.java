@@ -68,76 +68,76 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     @Override
     public synchronized void startSnapshot(String id) {
 
-            String markerReceivedFrom = null;
-            try {
-                markerReceivedFrom = RemoteServer.getClientHost();
-            } catch (Exception e) {
-                System.out.println("Snapshot iniziato di mia iniziativa");
-            }
+        String markerReceivedFrom = null;
+        try {
+            markerReceivedFrom = RemoteServer.getClientHost();
+        } catch (Exception e) {
+            System.out.println("Snapshot iniziato di mia iniziativa");
+        }
 
-            //Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha già terminato la sua di restore,
-            // in quando il suo stato sarà consistente con quello di cui ha fatto la restore. Tutti gli altri vanno ignorati.
-            //Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
-            //faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
-            if (!restoring || (restoring && markerReceivedFrom != null && !pendingRestores.contains(markerReceivedFrom))) {
-                if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
-                    System.out.println("Lo snap " + id + " era già in corso");
-                    if (markerReceivedFrom != null) { //se non sono io ad aver richiesto lo snap
-                        incomingStatus.get(id).remove(markerReceivedFrom);
-                        System.out.println("Ho ricevuto il marker da " + markerReceivedFrom + " e l'ho rimosso dal set");
+        //Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha già terminato la sua di restore,
+        // in quando il suo stato sarà consistente con quello di cui ha fatto la restore. Tutti gli altri vanno ignorati.
+        //Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
+        //faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
+        if (!restoring || (restoring && markerReceivedFrom != null && !pendingRestores.contains(markerReceivedFrom))) {
+            if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
+                System.out.println("Lo snap " + id + " era già in corso");
+                if (markerReceivedFrom != null) { //se non sono io ad aver richiesto lo snap
+                    incomingStatus.get(id).remove(markerReceivedFrom);
+                    System.out.println("Ho ricevuto il marker da " + markerReceivedFrom + " e l'ho rimosso dal set");
+                }
+                System.out.println("Devo aspettare il marker ancora da:");
+                for (String s : incomingStatus.get(id)) {
+                    System.out.println(s);
+                }
+                if (incomingStatus.get(id).isEmpty()) { //Se lo snapshot è finito
+                    saveSnapshot(runningSnapshots.get(id));
+                    incomingStatus.remove(id);
+                    runningSnapshots.remove(id);
+                    System.out.println("Lo snapshot " + id + " è terminato\n\n");
+                }
+            } else { //è la prima volta che ricevo il marker id di startSnap (o sono io ad averlo fatto partire)
+                System.out.println("Inizio per la prima volta lo snapshot con id=" + id);
+                clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
+                Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(id));
+                runningSnapshots.put(id, newSnapshot);
+
+                //Inizializzo la mappa di connessioni in ingresso per questo snapshot
+                Set<String> awaitingTokenFrom = new HashSet<>();
+                for (ConnInt connInt : getInConn()) {
+                    awaitingTokenFrom.add(connInt.getHost());
+                }
+                //Rimuovo chi mi ha mandato il token dal set di host da cui aspettare il marker
+                if (markerReceivedFrom != null) {
+                    awaitingTokenFrom.remove(markerReceivedFrom);
+                }
+                incomingStatus.put(id, awaitingTokenFrom);
+
+                System.out.println("Avvio gli snap degli outgoing 🤯🥵");
+                try {
+                    System.out.println("Outgoing nodes:");
+                    for (ConnInt connInt : getOutConn()) {
+                        System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
+                        SnapInt snapRemInt = ((SnapInt) LocateRegistry
+                                .getRegistry(connInt.getHost(), connInt.getPort())
+                                .lookup("SnapInt"));
+                        System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snap");
+                        new Thread(() -> {
+                            try {
+                                snapRemInt.startSnapshot(id);
+                            } catch (RemoteException e) { e.printStackTrace(); }
+                        }).start();
                     }
-                    System.out.println("Devo aspettare il marker ancora da:");
-                    for (String s : incomingStatus.get(id)) {
-                        System.out.println(s);
-                    }
-                    if (incomingStatus.get(id).isEmpty()) { //Se lo snapshot è finito
+                    //Se ho ricevuto il token dall'unico canale in ingresso
+                    if (incomingStatus.get(id).isEmpty()) {
                         saveSnapshot(runningSnapshots.get(id));
                         incomingStatus.remove(id);
                         runningSnapshots.remove(id);
-                        System.out.println("Lo snapshot " + id + " è terminato\n\n");
+                        System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)\n\n");
                     }
-                } else { //è la prima volta che ricevo il marker id di startSnap (o sono io ad averlo fatto partire)
-                    System.out.println("Inizio per la prima volta lo snapshot con id=" + id);
-                    clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
-                    Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(id));
-                    runningSnapshots.put(id, newSnapshot);
-
-                    //Inizializzo la mappa di connessioni in ingresso per questo snapshot
-                    Set<String> awaitingTokenFrom = new HashSet<>();
-                    for (ConnInt connInt : getInConn()) {
-                        awaitingTokenFrom.add(connInt.getHost());
-                    }
-                    //Rimuovo chi mi ha mandato il token dal set di host da cui aspettare il marker
-                    if (markerReceivedFrom != null) {
-                        awaitingTokenFrom.remove(markerReceivedFrom);
-                    }
-                    incomingStatus.put(id, awaitingTokenFrom);
-
-                    System.out.println("Avvio gli snap degli outgoing 🤯🥵");
-                    try {
-                        System.out.println("Outgoing nodes:");
-                        for (ConnInt connInt : getOutConn()) {
-                            System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
-                            SnapInt snapRemInt = ((SnapInt) LocateRegistry
-                                                            .getRegistry(connInt.getHost(), connInt.getPort())
-                                                            .lookup("SnapInt"));
-                            System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snap");
-                            new Thread(() -> {
-                                try {
-                                    snapRemInt.startSnapshot(id);
-                                } catch (RemoteException e) { e.printStackTrace(); }
-                            }).start();
-                        }
-                        //Se ho ricevuto il token dall'unico canale in ingresso
-                        if (incomingStatus.get(id).isEmpty()) {
-                            saveSnapshot(runningSnapshots.get(id));
-                            incomingStatus.remove(id);
-                            runningSnapshots.remove(id);
-                            System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)\n\n");
-                        }
-                    } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
-                }
+                } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
             }
+        }
 
     }
 
@@ -178,49 +178,55 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     }
 
     @Override
-    public synchronized void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
+    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
+        String tokenReceivedFrom = null;
+        Snapshot<S, M> toRestore = null;
+        synchronized (this){
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
-            String tokenReceivedFrom = null;
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
                 System.out.println("Marker per il restore ricevuto da: " + tokenReceivedFrom);
             } catch (Exception e) {
                 System.out.println("Restore iniziata di mia iniziativa");
             }
-            try {
-                //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
-                //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
-                if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
-                    restoring = false;
-                }
-                if (!restoring) {
-                    pendingRestores = incomingInit();
-                    //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
-                    restoring = true;
-                    Snapshot<S, M> toRestore = readSnapshot(id);
-                    this.restoreSnapshot(toRestore);
-                    //chiama il restore degli altri sulla current epoch
-                    for (ConnInt connInt : getOutConn()) {
-                        new Thread(() -> {
-                            try {
-                                ((SnapInt) LocateRegistry
-                                        .getRegistry(connInt.getHost(), connInt.getPort())
-                                        .lookup("SnapInt")).restore(toRestore.getId());
-                            } catch (Exception e) { e.printStackTrace(); }
-                        }).start();
-                    }
-                }
-                if (tokenReceivedFrom != null) {
-                    pendingRestores.remove(tokenReceivedFrom);
-                }
-                // se non devo aspettare il marker più da nessuno la restore è terminata
-                if (pendingRestores.isEmpty()) {
-                    restoring = false;
-                    System.out.println("Restore terminata!\n\n");
-                }
-            } catch (Exception e) { e.printStackTrace(); }
+
+            //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+            //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
+            if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
+                restoring = false;
+            }
+            if (!restoring) {
+                pendingRestores = incomingInit();
+                //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
+                restoring = true;
+                toRestore = readSnapshot(id);
+            }
         }
+        if (toRestore!=null){
+            this.restoreSnapshot(toRestore);
+            //chiama il restore degli altri sulla current epoch
+            for (ConnInt connInt : getOutConn()) {
+                Snapshot<S, M> finalToRestore = toRestore;
+                new Thread(() -> {
+                    try {
+                        ((SnapInt) LocateRegistry
+                                .getRegistry(connInt.getHost(), connInt.getPort())
+                                .lookup("SnapInt")).restore(finalToRestore.getId());
+                    } catch (Exception e) { e.printStackTrace(); }
+                }).start();
+            }
+
+            if (tokenReceivedFrom != null) {
+                pendingRestores.remove(tokenReceivedFrom);
+            }
+            // se non devo aspettare il marker più da nessuno la restore è terminata
+            if (pendingRestores.isEmpty()) {
+                restoring = false;
+                System.out.println("Restore terminata!\n\n");
+            }
+        }
+    }
 
 
     private Set<String> incomingInit() {

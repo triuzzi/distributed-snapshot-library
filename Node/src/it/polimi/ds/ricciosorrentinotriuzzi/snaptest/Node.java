@@ -57,9 +57,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         String sender = null;
         try {
             sender = RemoteServer.getClientHost();
+            if (shouldDiscard(sender)) { System.out.println("Trasferimento di "+amount+" a "+to+" scartato"); return; }
+            addMessage(sender, new Message("transfer", new Class<?>[]{String.class, Integer.class}, new Object[]{to, amount}));
         } catch (ServerNotActiveException e) { }
-        if (shouldDiscard(sender)) { System.out.println("Trasferimento di "+amount+" a "+to+" scartato"); return; }
-        addMessage(sender, new Message("transfer", new Class<?>[]{String.class, Integer.class}, new Object[]{to, amount}));
         if (getState().getCBalance(to) != null) { //problema: se non c'è, abbiamo perso dei soldi
             getState().sumBalance(to, amount);
             System.out.println("Trasferimento di "+amount+" a "+to+" effettuato. Nuovo saldo: "+getState().getCBalance(to));
@@ -68,27 +68,8 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         }
     }
 
-    @Override
-    public synchronized void withdraw(String from, Integer amount) throws RemoteException {
-        String sender = null;
-        try {
-            sender = RemoteServer.getClientHost();
-        } catch (ServerNotActiveException e) { }
-        if (shouldDiscard(sender)) { System.out.println("Prelievo di "+amount+" da "+from+" scartato"); return; }
-        addMessage(sender, new Message("withdraw", new Class<?>[]{String.class, Integer.class}, new Object[]{from, amount}));
-        Integer balance = getState().getCBalance(from);
-        if (balance != null && balance >= amount) {
-            getState().sumBalance(from, -amount);
-            System.out.println("Prelievo di "+amount+" da "+from+" effettuato. Nuovo saldo: "+getState().getCBalance(from));
-        } else {
-            System.out.println("Destinatario sconosciuto");
-        }
-    }
 
-    @Override
-    public synchronized void register(String customer) throws RemoteException {
-        getState().newCustomer(customer);
-    }
+
 
     @Override
     public void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException {
@@ -174,57 +155,38 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     public Integer getPort() { return port; }
 
     //metodi interfaccia pubblica
-    public Integer getBalance() {
-        return state.getBalance();
-    }
-
-    public void setBalance(Integer balance) { state.setBalance(balance);}
-
-    public void increase(Integer diff) {
-        state.increase(diff);
-    }
-
-    public void decrease(Integer diff) {
-        state.decrease(diff);
-    }
-
-    public void newCustomer(String id) { state.newCustomer(id); }
-
-    public void sumBalance(String customer, Integer quantity) {
-        state.sumBalance(customer, quantity);
-    }
 
     public Integer getCBalance(String customer) {
         return state.getCBalance(customer);
     }
 
-    public void transfer(String customer, String bank, String receiver, Integer amount) {
+    public void transferMoney(String customer, String receiveBank, String receiver, Integer amount) {
         if (getCBalance(customer) == null) {
             System.out.println("Non è stato trovato il cliente " + customer);
             return;
         }
-        PublicInt recieverBank = null;
+        PublicInt receiverBank = null;
         if (getCBalance(customer) >= amount) {
             for (ConnInt connection : getOutConn())
-                if (connection.getName().equalsIgnoreCase(bank)) {
+                if (connection.getName().equalsIgnoreCase(receiveBank)) {
                     try {
-                        recieverBank = (PublicInt) LocateRegistry
+                        receiverBank = (PublicInt) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("PublicInt");
                     } catch (Exception e) {
                         e.printStackTrace();
-                        System.out.println("La banca " + bank + " non è disponibie");
+                        System.out.println("La banca " + receiveBank + " non è disponibie");
                     }
 
-                    if (recieverBank != null) {
+                    if (receiverBank != null) {
                         try {
-                            recieverBank.transfer(receiver, amount);
+                            receiverBank.transfer(receiver, amount);
                             state.sumBalance(customer, -amount);
                             System.out.println("Invio il trasferimento");
 
                         } catch (RemoteException e) {
                             e.printStackTrace();
-                            System.out.println("La banca " + bank + " non è disponibie");
+                            System.out.println("La banca " + receiveBank + " non è disponibie");
                         }
                     } else {
                         System.out.println("I dati del destinatario inseriti non sono corretti");
@@ -327,6 +289,28 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
             e.printStackTrace();
             return false;
         }
+    }
+    /*
+    @Override
+    public synchronized void withdraw(String from, Integer amount) throws RemoteException {
+        String sender = null;
+        try {
+            sender = RemoteServer.getClientHost();
+        } catch (ServerNotActiveException e) { }
+        if (shouldDiscard(sender)) { System.out.println("Prelievo di "+amount+" da "+from+" scartato"); return; }
+        addMessage(sender, new Message("withdraw", new Class<?>[]{String.class, Integer.class}, new Object[]{from, amount}));
+        Integer balance = getState().getCBalance(from);
+        if (balance != null && balance >= amount) {
+            getState().sumBalance(from, -amount);
+            System.out.println("Prelievo di "+amount+" da "+from+" effettuato. Nuovo saldo: "+getState().getCBalance(from));
+        } else {
+            System.out.println("Destinatario sconosciuto");
+        }
+    }
+
+    @Override
+    public synchronized void register(String customer) throws RemoteException {
+        getState().newCustomer(customer);
     }
  */
 

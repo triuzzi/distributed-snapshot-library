@@ -19,7 +19,6 @@ public class Main {
 
         System.out.println("Server ready\n");
 
-        //CAPIRE NFT, da regalare ai propri outgoing
         XMLConfiguration ledgers = new XMLConfiguration("ledgers.xml");
 
         List<HierarchicalConfiguration> users =  ledgers.configurationsAt("user");
@@ -47,7 +46,7 @@ public class Main {
             Integer toTransfer = Integer.valueOf(scan.next());
             PublicInt recieverBank = null;
 
-            self.transfer(customer, bank, receiver, toTransfer);
+            self.transferMoney(customer, bank, receiver, toTransfer);
 
             System.out.println("Conti aggiornati");
             for (String name: self.getState().getLedger().keySet()) {
