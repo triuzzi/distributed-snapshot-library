@@ -2,7 +2,6 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
-
 import java.rmi.registry.LocateRegistry;
 import java.util.Scanner;
 
@@ -14,9 +13,9 @@ public class Main {
         Node self = new Node(config);
         System.out.println("Server ready\n");
 
-        for (String name: self.getState().getLedger().keySet()) {
-            System.out.println("User: " + name + ", balance " + self.getState().getLedger().get(name));
-        }
+        System.out.println("I miei clienti:");
+        for (String name: self.getState().getLedger().keySet())
+            System.out.println(name + ", balance " + self.getState().getLedger().get(name));
 
         Thread.sleep(2500);
         Scanner scan = new Scanner(System.in);
@@ -28,6 +27,8 @@ public class Main {
                     " - Bonifico a Emanuele da 2€ -> premi E \n" +
                     " - Bonifico a Giancarlo da 3€ -> premi G \n" +
                     " - Bonifico a Vincenzo da 4€ -> premi V \n" +
+                    " - Connessione a un nuovo nodo in uscita -> premi C \n" +
+                    " - Stampa di tutte le connessioni -> premi CC \n" +
                     " - Saldo di tutti i client -> premi S \n" +
                     " - Modifica sleep snapshot -> premi 1 \n" +
                     " - Modifica sleep restore -> premi 2 \n" +
@@ -36,7 +37,7 @@ public class Main {
             String selection = scan.next();
 
             if (selection.equalsIgnoreCase("b")) {
-                System.out.println("Inserisci il tuo identificativo");
+                System.out.println("\nInserisci il tuo identificativo");
                 String customer = scan.next();
                 System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
                 String bank = scan.next();
@@ -54,19 +55,32 @@ public class Main {
             } else if (selection.equalsIgnoreCase("g")){
                 self.transferMoney(self.getDefaultCustomer(), "Paypal", "Giancarlo", 3);
             } else if (selection.equalsIgnoreCase("1")){
-                System.out.println("Inserisci il valore in secondi");
+                System.out.println("\nInserisci il valore in secondi");
                 self.sleepSnapshot = Integer.parseInt(scan.next())*1000;
             } else if (selection.equalsIgnoreCase("2")){
-                System.out.println("Inserisci il valore in secondi");
+                System.out.println("\nInserisci il valore in secondi");
                 self.sleepRestore = Integer.parseInt(scan.next())*1000;
+            } else if (selection.equalsIgnoreCase("c")){
+                System.out.println("\nInserisci l'indirizzo della banca a cui connetterti");
+                String bankHost = scan.next();
+                System.out.println("Inserisci la sua porta remota");
+                Integer bankPort = Integer.parseInt(scan.next());
+                System.out.println("Inserisci il nome della banca");
+                String bankName = scan.next();
+                self.connectTo(bankHost,bankPort,bankName,true);
+            } else if (selection.equalsIgnoreCase("cc")){
+                System.out.println("\nConnessioni in ingresso:");
+                for (ConnInt c : self.getInConn())
+                    System.out.println(c.getName()+", "+c.getHost()+":"+c.getPort());
+                System.out.println("Connessioni in uscita:");
+                for (ConnInt c : self.getOutConn())
+                    System.out.println(c.getName()+", "+c.getHost()+":"+c.getPort());
             } else if (selection.equalsIgnoreCase("s")){
-                System.out.println("\n\nConti aggiornati");
-                for (String name : self.getState().getLedger().keySet()) {
-                    System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
-                }
-                System.out.println("\n\n");
+                System.out.println("\nConti aggiornati");
+                for (String name : self.getState().getLedger().keySet())
+                    System.out.println(name + " with balance " + self.getState().getLedger().get(name));
+                System.out.println("\n");
             } else if (selection.equalsIgnoreCase("x")){
-                //chiudi la filiale
                 System.out.println("Inserisci il nome della banca a cui trasferire i clienti");
                 String bank = scan.next();
                 for (ConnInt connection : self.getOutConn())
@@ -77,25 +91,15 @@ public class Main {
                                     .lookup("PublicInt");
                             System.out.println("Trasferisco i clienti");
                             receiverBank.transferLedger(self.getState().getLedger());
-                            self.getState().emptyLedger();
+                            self.leaveNetwork();
+                            self.safeExit();
+                            System.exit(1);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("La banca " + bank + " non è disponibile");
+                            System.out.println("La banca " + bank + " non è disponibile. Non posso chiudere la filiale");
                         }
                     }
-                for(ConnInt c: self.getState().getIncomingConnections())
-                    self.disconnectFrom(c.getHost(), c.getPort(), false);
-                for(ConnInt c: self.getState().getOutgoingConnections())
-                    self.disconnectFrom(c.getHost(), c.getPort(), true)
-                self.safeExit();
-                System.exit(1);
-            }
-            Thread.sleep(2500);
-            System.out.println("\n\nConti aggiornati");
-            for (String name : self.getState().getLedger().keySet()) {
-                System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
-            }
-            System.out.println("\n\n");
+            } else {}
         }
 
 

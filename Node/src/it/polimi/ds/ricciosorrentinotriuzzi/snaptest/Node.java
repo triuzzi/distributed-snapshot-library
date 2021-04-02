@@ -60,6 +60,27 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         System.out.println("Ora sono parte della rete!");
     }
 
+    //assumiamo che non ci siano snapshot in corso quando viene chiamata né durante la sua esecuzione. Idem per le restore
+    //synchronized per non fare operazioni durante la disconnessione
+    public synchronized void leaveNetwork() throws Exception {
+        config.reload();
+        if (config.getBoolean("canLeaveNetworkSafely")) {
+            System.out.println("Mi disconnetto dalla rete...");
+            for (ConnInt c: getInConn()) {
+                removeConn(false, c.getHost(), false);
+                PublicInt node = (PublicInt) LocateRegistry.getRegistry(c.getHost(), c.getPort()).lookup("PublicInt");
+                node.removeConn(true, getHost(), false);
+            }
+            for (ConnInt c: getOutConn()) {
+                removeConn(true, c.getHost(), false);
+                PublicInt node = (PublicInt) LocateRegistry.getRegistry(c.getHost(), c.getPort()).lookup("PublicInt");
+                //lo snapshot lo avvia solo l'ultimo nodo dal quale mi disconnetto
+                node.removeConn(false, this.host, !(getOutConn().size() > 1));
+            }
+            System.out.println("Disconnesso dalla rete");
+        }
+    }
+
 
     //PublicInt Implementation
     @Override
@@ -92,13 +113,15 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     }
 
     @Override
-    public void removeConn(boolean fromOutgoing, String host) throws RemoteException {
+    public void removeConn(boolean fromOutgoing, String host, boolean shouldStartSnapshot) throws RemoteException {
         (fromOutgoing ? getOutConn() : getInConn()).removeIf(o -> o.getHost().equals(host));
         System.out.println("Rimuovo "+host+" dagli "+(fromOutgoing ? "outgoing" : "incoming"));
-        try {
-            RemoteServer.getClientHost();
-            applyNetworkChange(); //se è una chiamata remota avvia lo snapshot
-        } catch (ServerNotActiveException e) { }
+        if (shouldStartSnapshot) {
+            try {
+                RemoteServer.getClientHost();
+                applyNetworkChange(); //se è una chiamata remota avvia lo snapshot
+            } catch (ServerNotActiveException e) { }
+        }
     }
 
     @Override
@@ -156,13 +179,14 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         return true;
     }
 
+    //assumiamo che viene chiamata solo quando la disconnessione non altera la proprietà di strongly connected graph
     //TODO assumiamo che vada sempre tutto bene (altrimenti il destinatario potrebbe avermi aggiunto e io fallisco ad aggiungere lui)
     public boolean disconnectFrom(String host, Integer port, boolean isOutgoingFromMe) {
         try {
             System.out.println("Disconnecting from "+host);
-            removeConn(isOutgoingFromMe, host);
+            removeConn(isOutgoingFromMe, host, false);
             PublicInt node = (PublicInt) LocateRegistry.getRegistry(host, port).lookup("PublicInt");
-            node.removeConn(!isOutgoingFromMe, getHost());
+            node.removeConn(!isOutgoingFromMe, getHost(), true);
             System.out.println("Disconnected");
         } catch (Exception e) { e.printStackTrace(); return false; }
         return true;

@@ -10,5 +10,5 @@ public interface PublicInt extends Remote {
     void transfer(String to, Integer amount) throws RemoteException;
     void transferLedger(Map<String, Integer> ledgerToImport) throws RemoteException;
     void addConn(boolean toOutgoing, String host, int port, String name) throws RemoteException;
-    void removeConn(boolean fromOutgoing, String host) throws RemoteException;
+    void removeConn(boolean fromOutgoing, String host, boolean shouldStartSnapshot) throws RemoteException;
 }
