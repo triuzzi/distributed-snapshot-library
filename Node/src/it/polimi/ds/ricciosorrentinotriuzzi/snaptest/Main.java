@@ -27,7 +27,6 @@ public class Main {
             self.getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
         }
 
-       //theta(e^n)
         for (String name: self.getState().getLedger().keySet()) {
             System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
         }
@@ -50,10 +49,17 @@ public class Main {
 
             self.transfer(customer, bank, receiver, toTransfer);
 
+            System.out.println("Conti aggiornati");
+            for (String name: self.getState().getLedger().keySet()) {
+                System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+            }
+
             do {
                 System.out.println("Vuoi chiudere l'applicazione? Y/N");
                 exitCondition = scan.next(); //qui il programma attende l'immissione dei dati
             } while (!exitCondition.equalsIgnoreCase("y") && !exitCondition.equalsIgnoreCase("n"));
+
+
         }
         self.safeExit();
 

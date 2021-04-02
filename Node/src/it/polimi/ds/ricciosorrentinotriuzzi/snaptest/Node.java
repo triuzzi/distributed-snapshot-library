@@ -219,6 +219,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
                     if (recieverBank != null) {
                         try {
                             recieverBank.transfer(receiver, amount);
+                            state.sumBalance(customer, -amount);
+                            System.out.println("Invio il trasferimento");
+
                         } catch (RemoteException e) {
                             e.printStackTrace();
                             System.out.println("La banca " + bank + " non è disponibie");
