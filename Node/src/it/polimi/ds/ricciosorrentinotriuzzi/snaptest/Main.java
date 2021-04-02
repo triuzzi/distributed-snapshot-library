@@ -30,6 +30,7 @@ public class Main {
             System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
         }
 
+        Thread.sleep(2500);
 
         String exitCondition = "N";
         while (!exitCondition.equalsIgnoreCase("y")) {
@@ -54,10 +55,7 @@ public class Main {
 
                 self.transferMoney(customer, bank, receiver, toTransfer);
 
-                System.out.println("Conti aggiornati");
-                for (String name : self.getState().getLedger().keySet()) {
-                    System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
-                }
+
             } else if (selection.equalsIgnoreCase("a")){
                 self.initiateSnapshot();
             } else if (selection.equalsIgnoreCase("v")){
@@ -67,6 +65,10 @@ public class Main {
                 self.transferMoney("Giancarlo", "Hype", "Emanuele", 2);
             }
             Thread.sleep(2500);
+            System.out.println("Conti aggiornati");
+            for (String name : self.getState().getLedger().keySet()) {
+                System.out.println("User: " + name + " Balance " + self.getState().getLedger().get(name));
+            }
             do {
                 System.out.println("Vuoi chiudere l'applicazione? Y/N");
                 exitCondition = scan.next(); //qui il programma attende l'immissione dei dati

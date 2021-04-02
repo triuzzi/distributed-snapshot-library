@@ -162,7 +162,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         return state.getCBalance(customer);
     }
 
-    public void transferMoney(String customer, String receiveBank, String receiver, Integer amount) {
+    public void transferMoney(String customer, String receiverBankID, String receiver, Integer amount) {
         if (getCBalance(customer) == null) {
             System.out.println("Non è stato trovato il cliente " + customer);
             return;
@@ -170,14 +170,14 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         PublicInt receiverBank = null;
         if (getCBalance(customer) >= amount) {
             for (ConnInt connection : getOutConn())
-                if (connection.getName().equalsIgnoreCase(receiveBank)) {
+                if (connection.getName().equalsIgnoreCase(receiverBankID)) {
                     try {
                         receiverBank = (PublicInt) LocateRegistry
                                 .getRegistry(connection.getHost(), connection.getPort())
                                 .lookup("PublicInt");
                     } catch (Exception e) {
                         e.printStackTrace();
-                        System.out.println("La banca " + receiveBank + " non è disponibie");
+                        System.out.println("La banca " + receiverBankID + " non è disponibie");
                     }
 
                     if (receiverBank != null) {
@@ -188,14 +188,14 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
                         } catch (RemoteException e) {
                             e.printStackTrace();
-                            System.out.println("La banca " + receiveBank + " non è disponibie");
+                            System.out.println("La banca " + receiverBankID + " non è disponibie");
                         }
                     } else {
                         System.out.println("I dati del destinatario inseriti non sono corretti");
                     }
-                } else {
-                    System.out.println("Non hai abbastanza fondi per trasferire l'importo selezionato\nIl tuo saldo è " + getCBalance(customer));
                 }
+        }else {
+            System.out.println("Non hai abbastanza fondi per trasferire l'importo selezionato\nIl tuo saldo è " + getCBalance(customer));
         }
     }
 }
