@@ -28,7 +28,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
         defaultCustomer = config.getString("defaultCustomer");
         state = new State();
         LocateRegistry.getRegistry(port).bind("PublicInt", this);
-        if (!checkCrash()) {
+        if (!hasCrashed()) {
             if (!config.getBoolean("newNetwork", false)) {
                 joinNetwork();
             }
@@ -38,6 +38,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
                 getState().newCustomer(hc.getString("name"),hc.getInt("balance"));
             }
         }
+        resetCrashDetector();
     }
 
     private void joinNetwork() throws Exception {

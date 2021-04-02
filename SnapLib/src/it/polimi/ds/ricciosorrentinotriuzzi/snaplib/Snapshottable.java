@@ -47,8 +47,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         clock = 0L;
         restoring = false;
         System.out.println("SnapLib configured");
-        if (checkCrash()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
-        resetCrashDetector();
+        if (hasCrashed()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
+        //resetCrashDetector(); DA CHIAMARE ALLA FINE DEL COSTRUTTORE!!!!!
         //non c'è un thread periodico solo per la dimostrazione
     }
 
@@ -72,7 +72,6 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     @Override
     public synchronized void startSnapshot(String id) {
-
         String markerReceivedFrom = null;
         try {
             markerReceivedFrom = RemoteServer.getClientHost();
@@ -292,7 +291,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         new Thread(this::initiateSnapshot).start();
     }
 
-    private void resetCrashDetector() {
+    public void resetCrashDetector() {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.TRUE);
             //System.out.println("The process has successfully started.");
@@ -306,7 +305,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         } catch (Exception ex) { ex.printStackTrace(); }
     }
 
-    public boolean checkCrash() {
+    public boolean hasCrashed() {
         try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
             return (boolean) objectIn.readObject();
         } catch (Exception ex) { return false; }

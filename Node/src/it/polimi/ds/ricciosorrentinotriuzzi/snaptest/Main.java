@@ -13,11 +13,10 @@ public class Main {
         Node self = new Node(config);
         System.out.println("Server ready\n");
 
+        Thread.sleep(2500);
         System.out.println("I miei clienti:");
         for (String name: self.getState().getLedger().keySet())
             System.out.println(name + ", balance " + self.getState().getLedger().get(name));
-
-        Thread.sleep(2500);
         Scanner scan = new Scanner(System.in);
         while (true) {
             System.out.println("\n\n" +
