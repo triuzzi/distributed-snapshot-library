@@ -78,7 +78,7 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
                 node.removeConn(false, this.host, !(getOutConn().size() > 1));
             }
             System.out.println("Disconnesso dalla rete");
-        }
+        } else {throw new Exception("Non posso lasciare la rete!");}
     }
 
 
