@@ -15,6 +15,10 @@ public class State implements Serializable {
         ledger = new HashMap<>();
     }
 
+    public void emptyLedger() {
+        ledger = new HashMap<>();
+    }
+
     public Map<String, Integer> getLedger() {
         return ledger;
     }

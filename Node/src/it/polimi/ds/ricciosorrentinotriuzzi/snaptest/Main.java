@@ -1,6 +1,9 @@
 package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
+import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
+
+import java.rmi.registry.LocateRegistry;
 import java.util.Scanner;
 
 public class Main {
@@ -64,6 +67,22 @@ public class Main {
                 System.out.println("\n\n");
             } else if (selection.equalsIgnoreCase("x")){
                 //chiudi la filiale
+                System.out.println("Inserisci il nome della banca a cui trasferire i clienti");
+                String bank = scan.next();
+                for (ConnInt connection : self.getOutConn())
+                    if (connection.getName().equalsIgnoreCase(bank)) {
+                        try {
+                            PublicInt receiverBank = (PublicInt) LocateRegistry
+                                    .getRegistry(connection.getHost(), connection.getPort())
+                                    .lookup("PublicInt");
+                            System.out.println("Trasferisco i clienti");
+                            receiverBank.transferLedger(self.getState().getLedger());
+                            self.getState().emptyLedger();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            System.out.println("La banca " + bank + " non è disponibile");
+                        }
+                    }
                 self.safeExit();
                 System.exit(1);
             }
