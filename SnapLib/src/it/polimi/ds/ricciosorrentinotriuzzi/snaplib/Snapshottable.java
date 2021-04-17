@@ -52,24 +52,22 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         //non c'è un thread periodico solo per la dimostrazione
     }
 
-    @Override
-    public long getClock() { return clock; }
-
-
-    protected void joinNetwork(String withHost, Integer port) throws Exception {
-        clock = ((SnapInt) LocateRegistry
-                .getRegistry(withHost, port)
-                .lookup("SnapInt")).getClock();
-        applyNetworkChange();
-    }
 
     public abstract S getState();
     public abstract String getHost();
-    public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
     public abstract Set<ConnInt> getInConn();
     public abstract Set<ConnInt> getOutConn();
 
+    // L'implementazione della restore prevere il ripristino dello stato e deve gestire i messaggi contenuti nello snapshot
+    public abstract void restoreSnapshot(Snapshot<S, M> snapshot);
 
+    // Crea un nuovo snapshot. Questo sarà identificato dal lamport clock corrente e dall'id del nodo corrente
+    public void initiateSnapshot() {
+        String id = clock + "." + getHost();
+        startSnapshot(id);
+    }
+
+    // Funzione remota per la ricezione dei token di snapshot. Esegue lo snapshot locale ed inoltra il token sui canali in uscita
     @Override
     public synchronized void startSnapshot(String id) {
         String markerReceivedFrom = null;
@@ -79,11 +77,12 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             System.out.println("Snapshot iniziato di mia iniziativa");
         }
 
-        //Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha
+        // Se sto facendo la restore, posso avviare lo snapshot solo se il nodo che me l'ha richiesto è un nodo che ha
         // già terminato la sua di restore,
-        // in quando il suo stato sarà consistente con quello di cui ha fatto la restore. Tutti gli altri vanno ignorati.
-        //Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
-        //faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
+        // in quando il suo stato sarà consistente con quello ripristinato dallo snapshot a cui convergerà la rete.
+        // I nodi che non rispettano questa condizione, e che invece richiedono uno snapshot, vanno ignorati.
+        // Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
+        // faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
         if (!restoring || (restoring && markerReceivedFrom != null && !pendingRestores.contains(markerReceivedFrom))) {
             if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
                 System.out.println("Lo snap " + id + " era già in corso");
@@ -101,32 +100,33 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     runningSnapshots.remove(id);
                     System.out.println("Lo snapshot " + id + " è terminato\n\n");
                 }
-            } else { //è la prima volta che ricevo il marker id di startSnap (o sono io ad averlo fatto partire)
+            } else { // Il nodo riceve per la prima volta il token associato all'id, oppure è il nodo stesso ad avviare
+                     // lo snapshot con quell'id
                 System.out.println("Inizio per la prima volta lo snapshot con id=" + id);
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(id));
                 runningSnapshots.put(id, newSnapshot);
 
-                //Inizializzo la mappa di connessioni in ingresso per questo snapshot
+                // Inizializzo la mappa di connessioni in ingresso per questo snapshot
                 Set<String> awaitingTokenFrom = new HashSet<>();
                 for (ConnInt connInt : getInConn()) {
                     awaitingTokenFrom.add(connInt.getHost());
                 }
-                //Rimuovo chi mi ha mandato il token dal set di host da cui aspettare il marker
+                // Rimuovo il mittente dal set di nodi in ingresso da cui aspettare il token associato allo snapshot
                 if (markerReceivedFrom != null) {
                     awaitingTokenFrom.remove(markerReceivedFrom);
                 }
                 incomingStatus.put(id, awaitingTokenFrom);
 
-                System.out.println("Avvio gli snap degli outgoing 🤯🥵");
+                System.out.println("Invio il token di snapshot ai nodi in uscita");
                 try {
-                    System.out.println("Outgoing nodes:");
+                    // System.out.println("Outgoing nodes:");
                     for (ConnInt connInt : getOutConn()) {
-                        System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
+                        // System.out.println(connInt.getName() + " at " + connInt.getHost() + ":" + connInt.getPort());
                         SnapInt snapRemInt = ((SnapInt) LocateRegistry
                                 .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt"));
-                        System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snap");
+                        System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snapshot");
                         new Thread(() -> {
                             try {
                                 Thread.sleep(sleepSnapshot);
@@ -134,7 +134,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                             } catch (RemoteException | InterruptedException e) { e.printStackTrace(); }
                         }).start();
                     }
-                    //Se ho ricevuto il token dall'unico canale in ingresso
+                    // Se il nodo ha una singola connessione in ingresso, lo snapshot può considerarsi terminato
                     if (incomingStatus.get(id).isEmpty()) {
                         saveSnapshot(runningSnapshots.get(id));
                         incomingStatus.remove(id);
@@ -147,7 +147,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     }
 
-    //Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker, salva il messaggio
+    // Per ogni snapshot attivo, se dal nodo da cui riceviamo il messaggio non ho ancora ricevuto il marker,
+    // salva il messaggio nel relativo snapshot
     public void addMessage(String sender, M message) {
         for (Snapshot<S, M> snapshot : runningSnapshots.values()) {
             if (incomingStatus.get(snapshot.getId()).contains(sender))
@@ -156,37 +157,14 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         System.out.println("Message " + message + " received from " + sender + " added");
     }
 
-    //Se c'è una restore in corso i messaggi vanno scartati (le chiamate RMI devono terminare immediatamente)
-    public boolean shouldDiscard(String sender) {
-        return (isRestoring() && pendingRestores.contains(sender));
-    }
-
-    //Salva lo stato per lo snapshot identificato da snapshotID
-    @SuppressWarnings("unchecked")
-    private S saveState(String snapshotID) {
-        File f = new File("temp.state");
-        S temp;
-        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(f))) {
-            objectOut.writeObject(getState());
-            //System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
-        } catch (Exception ex) { ex.printStackTrace(); return null; }
-        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(f))) {
-            temp = (S) objectOut.readObject();
-        } catch (Exception ex) { ex.printStackTrace(); return null; }
-        f.delete();
-        System.out.println("The state for snapshot " + snapshotID + " was successfully saved");
-        return temp;
-    }
-
-    public void initiateSnapshot() {
-        String id = clock + "." + getHost();
-        startSnapshot(id);
-    }
-
     @Override
-    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente
+    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente, altrimenti la restore viene fatta
+                                    // dello snapshot che ha l'id specificato
         String tokenReceivedFrom = null;
         Snapshot<S, M> toRestore = null;
+        // Innanzitutto, dobbiamo fare in modo che tra lo svuotamento delle due map ed il set di restoring (a true) non
+        // venga processato alcun messaggio di snapshot, che altrimenti non sarebbe ignorato
+        // Blocco synchronized perché se si ricevono altri messaggi
         synchronized (this){
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
@@ -309,4 +287,40 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             return (boolean) objectIn.readObject();
         } catch (Exception ex) { return false; }
     }
+
+
+    @Override
+    public long getClock() { return clock; }
+
+
+    protected void joinNetwork(String withHost, Integer port) throws Exception {
+        clock = ((SnapInt) LocateRegistry
+                .getRegistry(withHost, port)
+                .lookup("SnapInt")).getClock();
+        applyNetworkChange();
+    }
+
+
+    // Se c'è una restore in corso i messaggi vanno scartati (le chiamate RMI devono terminare immediatamente)
+    public boolean shouldDiscard(String sender) {
+        return (isRestoring() && pendingRestores.contains(sender));
+    }
+
+    //Salva lo stato per lo snapshot identificato da snapshotID
+    @SuppressWarnings("unchecked")
+    private S saveState(String snapshotID) {
+        File f = new File("temp.state");
+        S temp;
+        try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(f))) {
+            objectOut.writeObject(getState());
+            //System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
+        try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(f))) {
+            temp = (S) objectOut.readObject();
+        } catch (Exception ex) { ex.printStackTrace(); return null; }
+        f.delete();
+        System.out.println("The state for snapshot " + snapshotID + " was successfully saved");
+        return temp;
+    }
+
 }
