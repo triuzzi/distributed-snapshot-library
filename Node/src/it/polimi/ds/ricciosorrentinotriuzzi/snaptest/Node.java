@@ -146,7 +146,9 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
     @Override
     public void restoreSnapshot(Snapshot<State,Message> snapshot) {
         synchronized (this) {
+            System.out.println("Nel node");
             this.state = snapshot.getState();
+            System.out.println("Nel node dopo: " + snapshot.getId());
         }
         for (Message message : snapshot.getMessages()) {
             try {

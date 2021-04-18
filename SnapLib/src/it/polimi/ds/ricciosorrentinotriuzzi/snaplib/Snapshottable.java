@@ -175,20 +175,22 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 System.out.println("Restore iniziata di mia iniziativa");
             }
 
-            //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
-            //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
-            if (restoring && !pendingRestores.contains(tokenReceivedFrom)) {
-                restoring = false;
+            if (restoring) {
+                if(!pendingRestores.contains(tokenReceivedFrom))
+                    restoring = false;
+                else pendingRestores.remove(tokenReceivedFrom);
+                //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+                //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
             }
-            if (!restoring) {
-                pendingRestores = incomingInit();
-                //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
+            else{
+                //Avvio la restore
                 restoring = true;
                 toRestore = readSnapshot(id);
             }
         }
         if (toRestore != null) {
             this.restoreSnapshot(toRestore);
+            pendingRestores = incomingInit();
             //chiama il restore degli altri sulla current epoch
             for (ConnInt connInt : getOutConn()) {
                 Snapshot<S, M> finalToRestore = toRestore;
@@ -202,6 +204,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 }).start();
             }
             if (tokenReceivedFrom != null) {
+                //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
                 pendingRestores.remove(tokenReceivedFrom);
             }
             // se non devo aspettare il marker più da nessuno la restore è terminata
@@ -215,6 +218,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     private Set<String> incomingInit() {
         Set<String> toRet = new HashSet<>();
+        System.out.println(getInConn());
         for (ConnInt c : getInConn())
             toRet.add(c.getHost());
         return toRet;
