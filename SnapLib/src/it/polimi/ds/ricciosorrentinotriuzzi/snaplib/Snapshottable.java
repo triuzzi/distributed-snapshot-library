@@ -153,6 +153,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 }
             }
         }
+        else{
+            System.out.println("È in corso una restore, lo snapshot " + id + " è stato scartato");
+        }
 
     }
 
@@ -201,6 +204,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 for (ConnInt connInt : getOutConn()) {
                     Snapshot<S, M> finalToRestore = toRestore;
                     new Thread(() -> {
+                        try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
                         try {
                             Thread.sleep(sleepRestore);
                             ((SnapInt) LocateRegistry
@@ -279,9 +283,12 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     private void deleteSnapshots(String since) {
         File snapshotsDir = new File(System.getProperty("user.dir"));
         for (File snapshotFile : snapshotsDir.listFiles()) {
-            if (snapshotFile.getName().matches("([^\\s]+(\\.(?i)(snap))$)") && snapshotFile.getName().compareTo(since + ".snap") > 0)
+            if (snapshotFile.getName().matches("([^\\s]+(\\.(?i)(snap))$)") && snapshotFile.getName().compareTo(since + ".snap") > 0) {
                 snapshotFile.delete();
+            }
         }
+        System.out.println("Gli snapshot successivi a " + since + "sono stati eliminati, essendo stati avviati " +
+                "mentre era in corso una restore");
     }
 
     public boolean isRestoring() {
