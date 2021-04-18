@@ -47,15 +47,20 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         clock = 0L;
         restoring = false;
         System.out.println("SnapLib configured");
-        if (hasCrashed()) { restore(null); } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
+        if (hasCrashed()) {
+            restore(null);
+        } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
         resetCrashDetector();
         //non c'è un thread periodico solo per la dimostrazione
     }
 
 
     public abstract S getState();
+
     public abstract String getHost();
+
     public abstract Set<ConnInt> getInConn();
+
     public abstract Set<ConnInt> getOutConn();
 
     // L'implementazione della restore prevere il ripristino dello stato e deve gestire i messaggi contenuti nello snapshot
@@ -101,7 +106,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     System.out.println("Lo snapshot " + id + " è terminato\n\n");
                 }
             } else { // Il nodo riceve per la prima volta il token associato all'id, oppure è il nodo stesso ad avviare
-                     // lo snapshot con quell'id
+                // lo snapshot con quell'id
                 System.out.println("Inizio per la prima volta lo snapshot con id=" + id);
                 clock = Math.max(Long.parseLong(id.split("\\.")[0]) + 1, clock);
                 Snapshot<S, M> newSnapshot = new Snapshot<>(id, saveState(id));
@@ -131,7 +136,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                             try {
                                 Thread.sleep(sleepSnapshot);
                                 snapRemInt.startSnapshot(id);
-                            } catch (RemoteException | InterruptedException e) { e.printStackTrace(); }
+                            } catch (RemoteException | InterruptedException e) {
+                                e.printStackTrace();
+                            }
                         }).start();
                     }
                     // Se il nodo ha una singola connessione in ingresso, lo snapshot può considerarsi terminato
@@ -141,7 +148,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         runningSnapshots.remove(id);
                         System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)\n\n");
                     }
-                } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
+                } catch (NotBoundException | RemoteException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
@@ -159,13 +168,13 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
 
     @Override
     public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente, altrimenti la restore viene fatta
-                                    // dello snapshot che ha l'id specificato
+        // dello snapshot che ha l'id specificato
         String tokenReceivedFrom = null;
         Snapshot<S, M> toRestore = null;
         // Innanzitutto, dobbiamo fare in modo che tra lo svuotamento delle due map ed il set di restoring (a true) non
         // venga processato alcun messaggio di snapshot, che altrimenti non sarebbe ignorato
         // Blocco synchronized perché se si ricevono altri messaggi
-        synchronized (this){
+        synchronized (this) {
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
                 System.out.println("Marker per il restore ricevuto da: " + tokenReceivedFrom);
@@ -173,50 +182,51 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 System.out.println("Restore iniziata di mia iniziativa");
             }
 
-            if (restoring) {
-                if(!pendingRestores.contains(tokenReceivedFrom))
+            if (restoring && !pendingRestores.contains(tokenReceivedFrom))
                     restoring = false;
-                else pendingRestores.remove(tokenReceivedFrom);
-                //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
-                //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
-            }
-            else{
+                    //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+                    //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo la restore
+
+            if (!restoring) {
                 //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
                 restoring = true;
                 runningSnapshots = new HashMap<>();
                 incomingStatus = new HashMap<>();
                 toRestore = readSnapshot(id);
+                //this.restore snap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
+                // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
+                this.restoreSnapshot(toRestore);
+                pendingRestores = incomingInit();
+                //chiama il restore degli altri sulla current epoch
+                for (ConnInt connInt : getOutConn()) {
+                    Snapshot<S, M> finalToRestore = toRestore;
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(sleepRestore);
+                            ((SnapInt) LocateRegistry
+                                    .getRegistry(connInt.getHost(), connInt.getPort())
+                                    .lookup("SnapInt")).restore(finalToRestore.getId());
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }).start();
+                }
             }
 
-        if (toRestore != null) {
-            //this.restore snap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
-            // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
-            this.restoreSnapshot(toRestore);
-            pendingRestores = incomingInit();
-            //chiama il restore degli altri sulla current epoch
-            for (ConnInt connInt : getOutConn()) {
-                Snapshot<S, M> finalToRestore = toRestore;
-                new Thread(() -> {
-                    try {
-                        Thread.sleep(sleepRestore);
-                        ((SnapInt) LocateRegistry
-                                .getRegistry(connInt.getHost(), connInt.getPort())
-                                .lookup("SnapInt")).restore(finalToRestore.getId());
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }).start();
-            }
             if (tokenReceivedFrom != null) {
                 //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
                 pendingRestores.remove(tokenReceivedFrom);
+            }
+
+            System.out.println("Mi mancano ancora i marker di restore di");
+            for (String waiting : pendingRestores) {
+                System.out.println(waiting);
             }
             // se non devo aspettare il marker più da nessuno la restore è terminata
             if (pendingRestores.isEmpty()) {
                 restoring = false;
                 System.out.println("Restore terminata!\n\n");
             }
-        }
         }
     }
 
@@ -233,7 +243,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(snap.getId() + ".snap"))) {
             objectOut.writeObject(snap);
             System.out.println("The snapshot " + snap.getId() + " was successfully written to the file");
-        } catch (Exception ex) { ex.printStackTrace(); }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     // Non può restituire null perché dopo la connessione un nodo avrà sempre almeno uno snapshot,
@@ -254,7 +266,10 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(id + ".snap"))) {
             toReturn = (Snapshot<S, M>) objectOut.readObject();
             System.out.println("The snapshot " + toReturn.getId() + " was successfully read from the file");
-        } catch (Exception ex) { ex.printStackTrace(); return null; }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
         clock = Long.parseLong(toReturn.getId().split("\\.")[0]) + 1;
         return toReturn;
     }
@@ -273,7 +288,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         return restoring;
     }
 
-    public void applyNetworkChange(){
+    public void applyNetworkChange() {
         new Thread(this::initiateSnapshot).start();
     }
 
@@ -281,25 +296,33 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.TRUE);
             //System.out.println("The process has successfully started.");
-        } catch (Exception ex) { ex.printStackTrace(); }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public void safeExit() {
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream("crash_reporter.dat"))) {
             objectOut.writeObject(Boolean.FALSE);
             System.out.println("The process has been successfully closed");
-        } catch (Exception ex) { ex.printStackTrace(); }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
     }
 
     public boolean hasCrashed() {
         try (ObjectInputStream objectIn = new ObjectInputStream(new FileInputStream("crash_reporter.dat"))) {
             return (boolean) objectIn.readObject();
-        } catch (Exception ex) { return false; }
+        } catch (Exception ex) {
+            return false;
+        }
     }
 
 
     @Override
-    public long getClock() { return clock; }
+    public long getClock() {
+        return clock;
+    }
 
 
     protected void joinNetwork(String withHost, Integer port) throws Exception {
@@ -323,10 +346,16 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         try (ObjectOutputStream objectOut = new ObjectOutputStream(new FileOutputStream(f))) {
             objectOut.writeObject(getState());
             //System.out.println("The state " + snapshotID + ".state" + " was successfully written to the file");
-        } catch (Exception ex) { ex.printStackTrace(); return null; }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
         try (ObjectInputStream objectOut = new ObjectInputStream(new FileInputStream(f))) {
             temp = (S) objectOut.readObject();
-        } catch (Exception ex) { ex.printStackTrace(); return null; }
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return null;
+        }
         f.delete();
         System.out.println("The state for snapshot " + snapshotID + " was successfully saved");
         return temp;
