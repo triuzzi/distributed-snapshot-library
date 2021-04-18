@@ -16,7 +16,7 @@ public class Main {
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
         Node self = new Node(config);
-        System.out.println("Server ready\n");
+        System.err.println("Server ready\n");
 
         Thread.sleep(2500);
         System.out.println("I miei clienti:");
@@ -24,7 +24,7 @@ public class Main {
             System.out.println(name + ", balance " + self.getState().getLedger().get(name));
         Scanner scan = new Scanner(System.in);
         while (true) {
-            System.out.println("\n\n" +
+            System.err.println("\n\n" +
                     "Cosa vuoi fare?\n" +
                     " - Snapshot -> premi A \n" +
                     " - Bonifico generico -> premi B \n" +
