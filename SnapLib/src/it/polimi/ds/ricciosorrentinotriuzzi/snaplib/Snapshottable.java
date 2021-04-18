@@ -148,12 +148,10 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         runningSnapshots.remove(id);
                         System.out.println("Il mio snapshot locale " + id + " è già terminato (marker dall'unico ingresso)\n\n");
                     }
-                } catch (NotBoundException | RemoteException e) {
-                    e.printStackTrace();
-                }
+                } catch (NotBoundException | RemoteException e) { e.printStackTrace(); }
             }
         }
-        else{
+        else {
             System.out.println("È in corso una restore, lo snapshot " + id + " è stato scartato");
         }
 
@@ -170,74 +168,71 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     }
 
     @Override
-    public void restore(String id) { //se id è null, viene fatta la restore sello snap più recente, altrimenti la restore viene fatta
+    public synchronized void restore(String id) { //se id è null, viene fatta la restore sello snap più recente, altrimenti la restore viene fatta
         // dello snapshot che ha l'id specificato
         String tokenReceivedFrom = null;
         Snapshot<S, M> toRestore = null;
         // Innanzitutto, dobbiamo fare in modo che tra lo svuotamento delle due map ed il set di restoring (a true) non
         // venga processato alcun messaggio di snapshot, che altrimenti non sarebbe ignorato
         // Blocco synchronized perché se si ricevono altri messaggi
-        synchronized (this) {
-            try {
-                tokenReceivedFrom = RemoteServer.getClientHost();
-                System.out.println("Marker per il restore ricevuto da: " + tokenReceivedFrom);
-            } catch (Exception e) {
-                System.out.println("Restore iniziata di mia iniziativa");
-            }
+        try {
+            tokenReceivedFrom = RemoteServer.getClientHost();
+            System.out.println("Marker per il restore ricevuto da: " + tokenReceivedFrom);
+        } catch (Exception e) {
+            System.out.println("Restore iniziata di mia iniziativa");
+        }
 
-            if (restoring && !pendingRestores.contains(tokenReceivedFrom))
-                    restoring = false;
-                    //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
-                    //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo la restore
+        if (restoring && !pendingRestores.contains(tokenReceivedFrom))
+            restoring = false;
+            //se ero in restore e tokenReceivedFrom mi aveva già mandato il marker
+            //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo la restore
 
-            if (!restoring) {
-                //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
-                restoring = true;
-                runningSnapshots = new HashMap<>();
-                incomingStatus = new HashMap<>();
-                toRestore = readSnapshot(id);
-                //this.restore snap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
-                // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
-                this.restoreSnapshot(toRestore);
-                pendingRestores = incomingInit();
-                //chiama il restore degli altri sulla current epoch
-                for (ConnInt connInt : getOutConn()) {
-                    Snapshot<S, M> finalToRestore = toRestore;
-                    new Thread(() -> {
-                        try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
-                        try {
-                            Thread.sleep(sleepRestore);
-                            ((SnapInt) LocateRegistry
-                                    .getRegistry(connInt.getHost(), connInt.getPort())
-                                    .lookup("SnapInt")).restore(finalToRestore.getId());
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }).start();
-                }
+        if (!restoring) {
+            //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
+            restoring = true;
+            runningSnapshots = new HashMap<>();
+            incomingStatus = new HashMap<>();
+            toRestore = readSnapshot(id);
+            //this.restoreSnap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
+            // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
+            this.restoreSnapshot(toRestore);
+            pendingRestores = incomingInit();
+            //chiama il restore degli altri sulla current epoch
+            for (ConnInt connInt : getOutConn()) {
+                Snapshot<S, M> finalToRestore = toRestore;
+                new Thread(() -> {
+                    try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
+                    try {
+                        Thread.sleep(sleepRestore);
+                        ((SnapInt) LocateRegistry
+                                .getRegistry(connInt.getHost(), connInt.getPort())
+                                .lookup("SnapInt")).restore(finalToRestore.getId());
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+                }).start();
             }
+        }
 
-            if (tokenReceivedFrom != null) {
-                //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
-                pendingRestores.remove(tokenReceivedFrom);
-            }
+        if (tokenReceivedFrom != null) {
+            //rimuovo chi mi ha mandato il marker dal set se non ho avviato io la restore
+            pendingRestores.remove(tokenReceivedFrom);
+        }
 
-            System.out.println("Mi mancano ancora i marker di restore di");
-            for (String waiting : pendingRestores) {
-                System.out.println(waiting);
-            }
-            // se non devo aspettare il marker più da nessuno la restore è terminata
-            if (pendingRestores.isEmpty()) {
-                restoring = false;
-                System.out.println("Restore terminata!\n\n");
-            }
+        System.out.println("Mi mancano ancora i marker di restore di");
+        for (String waiting : pendingRestores) {
+            System.out.println(waiting);
+        }
+        // se non devo aspettare il marker più da nessuno la restore è terminata
+        if (pendingRestores.isEmpty()) {
+            restoring = false;
+            System.out.println("Restore terminata!\n\n");
         }
     }
 
 
     private Set<String> incomingInit() {
         Set<String> toRet = new HashSet<>();
-        System.out.println(getInConn());
         for (ConnInt c : getInConn())
             toRet.add(c.getHost());
         return toRet;

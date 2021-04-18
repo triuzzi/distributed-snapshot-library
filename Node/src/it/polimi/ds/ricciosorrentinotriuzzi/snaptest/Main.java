@@ -2,11 +2,16 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.rmi.registry.LocateRegistry;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
+        System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
         System.out.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));

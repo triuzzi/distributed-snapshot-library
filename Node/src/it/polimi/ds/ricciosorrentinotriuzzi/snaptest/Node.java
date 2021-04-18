@@ -145,14 +145,14 @@ public class Node extends Snapshottable<State, Message> implements PublicInt, Se
 
     @Override
     public void restoreSnapshot(Snapshot<State,Message> snapshot) {
-            this.state = snapshot.getState();
+        this.state = snapshot.getState();
         new Thread(() -> {
-        for (Message message : snapshot.getMessages()) {
-            try {
-                Method method = Node.class.getMethod(message.getMethodName(), message.getParameterTypes());
-                method.invoke(this, message.getParameters());
-            } catch (Exception e) { e.printStackTrace(); }
-        }
+            for (Message message : snapshot.getMessages()) {
+                try {
+                    Method method = Node.class.getMethod(message.getMethodName(), message.getParameterTypes());
+                    method.invoke(this, message.getParameters());
+                } catch (Exception e) { e.printStackTrace(); }
+            }
         }).start();
     }
 
