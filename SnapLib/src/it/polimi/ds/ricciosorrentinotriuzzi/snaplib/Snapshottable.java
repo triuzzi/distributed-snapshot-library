@@ -166,8 +166,6 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         // venga processato alcun messaggio di snapshot, che altrimenti non sarebbe ignorato
         // Blocco synchronized perché se si ricevono altri messaggi
         synchronized (this){
-            runningSnapshots = new HashMap<>();
-            incomingStatus = new HashMap<>();
             try {
                 tokenReceivedFrom = RemoteServer.getClientHost();
                 System.out.println("Marker per il restore ricevuto da: " + tokenReceivedFrom);
@@ -183,12 +181,16 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 //se ne ricevo un altro significa che c'è stato un altro crash e devo ricominciare da capo
             }
             else{
-                //Avvio la restore
+                //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
                 restoring = true;
+                runningSnapshots = new HashMap<>();
+                incomingStatus = new HashMap<>();
                 toRestore = readSnapshot(id);
             }
-        }
+
         if (toRestore != null) {
+            //this.restore snap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
+            // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
             this.restoreSnapshot(toRestore);
             pendingRestores = incomingInit();
             //chiama il restore degli altri sulla current epoch
@@ -200,7 +202,9 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         ((SnapInt) LocateRegistry
                                 .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt")).restore(finalToRestore.getId());
-                    } catch (Exception e) { e.printStackTrace(); }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }).start();
             }
             if (tokenReceivedFrom != null) {
@@ -212,6 +216,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                 restoring = false;
                 System.out.println("Restore terminata!\n\n");
             }
+        }
         }
     }
 
