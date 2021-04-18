@@ -1,6 +1,7 @@
 # Default ignored files
 /shelf/
 /workspace.xml
+/Node/ledgers.xml
 # Datasource local storage ignored files
 /dataSources/
 /dataSources.local.xml
