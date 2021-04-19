@@ -88,7 +88,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         // I nodi che non rispettano questa condizione, e che invece richiedono uno snapshot, vanno ignorati.
         // Questo è per gestire il caso in cui un nodo A faccia partire la restore in una porzione della rete e un altro nodo B
         // faccia partire uno snapshot prima di ricevere il marker di restore da A, ma comunque dopo l'avvio della restore di A
-        if (!restoring || (restoring && markerReceivedFrom != null && !pendingRestores.contains(markerReceivedFrom))) {
+        if (!restoring || (restoring && markerReceivedFrom == null) || (restoring && markerReceivedFrom != null && !pendingRestores.contains(markerReceivedFrom))) {
             if (incomingStatus.containsKey(id)) { //lo snap identificato da id è in corso
                 System.out.println("Lo snap " + id + " era già in corso");
                 if (markerReceivedFrom != null) { //se non sono io ad aver richiesto lo snap
@@ -276,13 +276,16 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
     /* Elimina gli snapshot con nome > since */
     @SuppressWarnings("unchecked")
     private void deleteSnapshots(String since) {
+        boolean atLeastOne = false;
         File snapshotsDir = new File(System.getProperty("user.dir"));
         for (File snapshotFile : snapshotsDir.listFiles()) {
             if (snapshotFile.getName().matches("([^\\s]+(\\.(?i)(snap))$)") && snapshotFile.getName().compareTo(since + ".snap") > 0) {
                 snapshotFile.delete();
+                atLeastOne = true;
             }
         }
-        System.out.println("Gli snapshot successivi a " + since + "sono stati eliminati, essendo stati avviati " +
+        if (atLeastOne)
+            System.out.println("Gli snapshot successivi a " + since + "sono stati eliminati, essendo stati avviati " +
                 "mentre era in corso una restore");
     }
 
