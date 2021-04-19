@@ -12,19 +12,19 @@ import java.util.Scanner;
 public class Main {
     public static void main(String[] args) throws Exception {
         System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
-        System.out.println("\nStarting server...");
+        System.err.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
         Node self = new Node(config);
-        System.out.println("Server ready\n");
+        System.err.println("Server ready\n");
 
         Thread.sleep(2500);
-        System.out.println("I miei clienti:");
+        System.err.println("I miei clienti:");
         for (String name: self.getState().getLedger().keySet())
-            System.out.println(name + ", balance " + self.getState().getLedger().get(name));
+            System.err.println(name + ", balance " + self.getState().getLedger().get(name));
         Scanner scan = new Scanner(System.in);
         while (true) {
-            System.out.println("\n\n" +
+            System.err.println("\n\n" +
                     "Cosa vuoi fare?\n" +
                     " - Snapshot -> premi A \n" +
                     " - Bonifico generico -> premi B \n" +
@@ -41,13 +41,13 @@ public class Main {
             String selection = scan.next();
 
             if (selection.equalsIgnoreCase("b")) {
-                System.out.println("\nInserisci il tuo identificativo");
+                System.err.println("\nInserisci il tuo identificativo");
                 String customer = scan.next();
-                System.out.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
+                System.err.println("Inserisci il nome della banca a cui è indirizzato il bonifico");
                 String bank = scan.next();
-                System.out.println("Inserisci l'identificativo del destinatario");
+                System.err.println("Inserisci l'identificativo del destinatario");
                 String receiver = scan.next();
-                System.out.println("Inserisci la somma da trasferire");
+                System.err.println("Inserisci la somma da trasferire");
                 Integer toTransfer = Integer.parseInt(scan.next());
                 self.transferMoney(customer, bank, receiver, toTransfer);
             } else if (selection.equalsIgnoreCase("a")){
@@ -59,33 +59,33 @@ public class Main {
             } else if (selection.equalsIgnoreCase("g")){
                 self.transferMoney(self.getDefaultCustomer(), "Paypal", "Giancarlo", 3);
             } else if (selection.equalsIgnoreCase("1")){
-                System.out.println("\nInserisci il valore in secondi");
+                System.err.println("\nInserisci il valore in secondi");
                 self.sleepSnapshot = Integer.parseInt(scan.next())*1000;
             } else if (selection.equalsIgnoreCase("2")){
-                System.out.println("\nInserisci il valore in secondi");
+                System.err.println("\nInserisci il valore in secondi");
                 self.sleepRestore = Integer.parseInt(scan.next())*1000;
             } else if (selection.equalsIgnoreCase("c")){
-                System.out.println("\nInserisci l'indirizzo della banca a cui connetterti");
+                System.err.println("\nInserisci l'indirizzo della banca a cui connetterti");
                 String bankHost = scan.next();
-                System.out.println("Inserisci la sua porta remota");
+                System.err.println("Inserisci la sua porta remota");
                 Integer bankPort = Integer.parseInt(scan.next());
-                System.out.println("Inserisci il nome della banca");
+                System.err.println("Inserisci il nome della banca");
                 String bankName = scan.next();
                 self.connectTo(bankHost,bankPort,bankName,true);
             } else if (selection.equalsIgnoreCase("cc")){
-                System.out.println("\nConnessioni in ingresso:");
+                System.err.println("\nConnessioni in ingresso:");
                 for (ConnInt c : self.getInConn())
-                    System.out.println(c.getName()+", "+c.getHost()+":"+c.getPort());
-                System.out.println("Connessioni in uscita:");
+                    System.err.println(c.getName()+", "+c.getHost()+":"+c.getPort());
+                System.err.println("Connessioni in uscita:");
                 for (ConnInt c : self.getOutConn())
-                    System.out.println(c.getName()+", "+c.getHost()+":"+c.getPort());
+                    System.err.println(c.getName()+", "+c.getHost()+":"+c.getPort());
             } else if (selection.equalsIgnoreCase("s")){
-                System.out.println("\nConti aggiornati");
+                System.err.println("\nConti aggiornati");
                 for (String name : self.getState().getLedger().keySet())
-                    System.out.println(name + " with balance " + self.getState().getLedger().get(name));
-                System.out.println("\n");
+                    System.err.println(name + " with balance " + self.getState().getLedger().get(name));
+                System.err.println("\n");
             } else if (selection.equalsIgnoreCase("x")){
-                System.out.println("Inserisci il nome della banca a cui trasferire i clienti");
+                System.err.println("Inserisci il nome della banca a cui trasferire i clienti");
                 String bank = scan.next();
                 for (ConnInt connection : self.getOutConn())
                     if (connection.getName().equalsIgnoreCase(bank)) {
@@ -93,14 +93,14 @@ public class Main {
                             PublicInt receiverBank = (PublicInt) LocateRegistry
                                     .getRegistry(connection.getHost(), connection.getPort())
                                     .lookup("PublicInt");
-                            System.out.println("Trasferisco i clienti");
+                            System.err.println("Trasferisco i clienti");
                             receiverBank.transferLedger(self.getState().getLedger());
                             self.leaveNetwork();
                             self.safeExit();
                             System.exit(1);
                         } catch (Exception e) {
                             e.printStackTrace();
-                            System.out.println("La banca " + bank + " non è disponibile. Non posso chiudere la filiale");
+                            System.err.println("La banca " + bank + " non è disponibile. Non posso chiudere la filiale");
                         }
                     }
             } else {}
@@ -118,7 +118,7 @@ public class Main {
 
         //trasferimento: Dimmi la banca a cui vuoi traferire. Dimmi il cliente a cui vuoi trasferire. Dimmmi la somma che vuoi trasferire.
 
-        //System.out.println("Mi connetto a Vincenzo");
+        //System.err.println("Mi connetto a Vincenzo");
 
         /*Thread.sleep(10000);
         self.connectTo("87.20.154.215",1099,"Gianc", true);
@@ -132,13 +132,13 @@ public class Main {
 
         /*if (self.getName().equals("Vinceee")) {
             Thread.sleep(5_000);
-            System.out.println("Avvio snap con balance: "+self.getState().getBalance());
+            System.err.println("Avvio snap con balance: "+self.getState().getBalance());
             self.initiateSnapshot();
             Thread.sleep(30_000);
-            System.out.println("Inizio restore");
+            System.err.println("Inizio restore");
             //self.restore();
             Thread.sleep(20_000);
-            System.out.println("My final balance: "+self.getState().getBalance());
+            System.err.println("My final balance: "+self.getState().getBalance());
         }*/
 
         //Thread.sleep(45_000);
@@ -156,9 +156,9 @@ public class Main {
     PublicInt remoteNode = (PublicInt) LocateRegistry
             .getRegistry("151.75.54.217", 1099)
             .lookup("PublicInt");
-    System.out.println("Connection established");
+    System.err.println("Connection established");
     remoteNode.increase(100);
-    System.out.println("Increase called\n");
+    System.err.println("Increase called\n");
 */
 //Naming.bind("rmi://localhost:1099/NodeInt",stub);
 //NodeInt remint = (NodeInt) Naming.lookup("rmi://93.148.117.106:1099/NodeInt")

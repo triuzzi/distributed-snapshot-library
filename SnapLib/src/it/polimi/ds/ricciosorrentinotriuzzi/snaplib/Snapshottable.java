@@ -201,7 +201,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             for (ConnInt connInt : getOutConn()) {
                 Snapshot<S, M> finalToRestore = toRestore;
                 new Thread(() -> {
-                    try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
+                    //try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
                     try {
                         Thread.sleep(sleepRestore);
                         ((SnapInt) LocateRegistry
