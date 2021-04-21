@@ -12,8 +12,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public abstract class Snapshottable<S extends Serializable, M extends Serializable> extends UnicastRemoteObject implements SnapInt {
-    //metodi abstract che mi passino il riferimento (siamo sicuri di volerlo fare? Ci fidiamo dell'implementazione del metodo?)
-
     //variabili da cambiare per i test, non sarebbero incluse nella libreria
     public int sleepSnapshot = 0;
     public int sleepRestore = 0;
@@ -193,15 +191,13 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
             toRestore = readSnapshot(id);
-            //this.restoreSnap può stare fuori dal synch perché se il lock viene acquisito da un messaggio, la should discard lo farà scartare
-            // e quindi non modificherà lo stato dello snap che andiamo a ripristinare
-            this.restoreSnapshot(toRestore);
-            pendingRestores = incomingInit();
+
             //chiama il restore degli altri sulla current epoch
             for (ConnInt connInt : getOutConn()) {
                 Snapshot<S, M> finalToRestore = toRestore;
                 new Thread(() -> {
                     //try { Thread.sleep(15_000); } catch (InterruptedException e) { e.printStackTrace(); }
+                    System.out.println("Invio il marker di restore a " + connInt.getHost());
                     try {
                         Thread.sleep(sleepRestore);
                         ((SnapInt) LocateRegistry
@@ -212,6 +208,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     }
                 }).start();
             }
+            this.restoreSnapshot(toRestore);
+            pendingRestores = incomingInit();
         }
 
         if (tokenReceivedFrom != null) {
