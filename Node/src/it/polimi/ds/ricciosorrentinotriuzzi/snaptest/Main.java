@@ -3,15 +3,13 @@ package it.polimi.ds.ricciosorrentinotriuzzi.snaptest;
 import it.polimi.ds.ricciosorrentinotriuzzi.snaplib.ConnInt;
 import org.apache.commons.configuration.XMLConfiguration;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.rmi.registry.LocateRegistry;
 import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
+        //System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
         System.err.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));
@@ -87,7 +85,7 @@ public class Main {
             } else if (selection.equalsIgnoreCase("x")){
                 System.err.println("Inserisci il nome della banca a cui trasferire i clienti");
                 String bank = scan.next();
-                for (ConnInt connection : self.getOutConn())
+                for (ConnInt connection : self.getOutConn()) {
                     if (connection.getName().equalsIgnoreCase(bank)) {
                         try {
                             PublicInt receiverBank = (PublicInt) LocateRegistry
@@ -103,62 +101,12 @@ public class Main {
                             System.err.println("La banca " + bank + " non è disponibile. Non posso chiudere la filiale");
                         }
                     }
-            } else {}
+                }
+            }
         }
-
-
-
-        //chi sei? Seleziona il tuo nome.
-        //che vuoi fare? Prelevare, versare o trasferire?
-
-            /* Problema: si viola la consistenza del sistema, non è più a somma costante
-            //prelievo: togli sia dal conto che dal balance
-            //versamento: aggiungi a entrambi
-            */
-
-        //trasferimento: Dimmi la banca a cui vuoi traferire. Dimmi il cliente a cui vuoi trasferire. Dimmmi la somma che vuoi trasferire.
-
-        //System.err.println("Mi connetto a Vincenzo");
-
-        /*Thread.sleep(10000);
-        self.connectTo("87.20.154.215",1099,"Gianc", true);
-        Thread.sleep(3000);
-        self.connectTo("87.20.154.215",1099,"Gianc", true);
-        self.connectTo("151.70.145.224",1099,"Lele", true);
-        Thread.sleep(10000);
-        self.disconnectFrom("87.20.154.215",1099, true);
-        self.disconnectFrom("151.70.145.224",1099, true);*/
-
-
-        /*if (self.getName().equals("Vinceee")) {
-            Thread.sleep(5_000);
-            System.err.println("Avvio snap con balance: "+self.getState().getBalance());
-            self.initiateSnapshot();
-            Thread.sleep(30_000);
-            System.err.println("Inizio restore");
-            //self.restore();
-            Thread.sleep(20_000);
-            System.err.println("My final balance: "+self.getState().getBalance());
-        }*/
-
-        //Thread.sleep(45_000);
 
     }
 }
 
-
-/*
-    Registry registry = LocateRegistry.createRegistry(1099);
-    NodeImpl self = new NodeImpl(config);
-    PublicInt stub = (PublicInt) UnicastRemoteObject.exportObject(self, 1099);
-    registry.bind("PublicInt", stub);
-
-    PublicInt remoteNode = (PublicInt) LocateRegistry
-            .getRegistry("151.75.54.217", 1099)
-            .lookup("PublicInt");
-    System.err.println("Connection established");
-    remoteNode.increase(100);
-    System.err.println("Increase called\n");
-*/
 //Naming.bind("rmi://localhost:1099/NodeInt",stub);
 //NodeInt remint = (NodeInt) Naming.lookup("rmi://93.148.117.106:1099/NodeInt")
