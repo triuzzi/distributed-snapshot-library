@@ -45,7 +45,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         clock = 0L;
         restoring = false;
         System.out.println("SnapLib configured");
-        if (hasCrashed()) {
+        if (hasCrashed()) {                                                                                                                                                                                 //try{Thread.sleep(2000);} catch (Exception e) {}
             restore(null);
         } //se c'è stato un crash, avvia la restore dell'ultimo snapshot
         resetCrashDetector();
@@ -191,7 +191,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
             toRestore = readSnapshot(id);
-
+            this.restoreSnapshot(toRestore);
+            pendingRestores = incomingInit();
             //chiama il restore degli altri sulla current epoch
             for (ConnInt connInt : getOutConn()) {
                 Snapshot<S, M> finalToRestore = toRestore;
@@ -208,8 +209,6 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                     }
                 }).start();
             }
-            this.restoreSnapshot(toRestore);
-            pendingRestores = incomingInit();
         }
 
         if (tokenReceivedFrom != null) {
