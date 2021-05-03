@@ -188,6 +188,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         if (!restoring) {
             //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
             restoring = true;
+            for(String snap : runningSnapshots.keySet())
+                System.out.println("Lo snapshot " + snap + " è stato cancellato ");
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
             toRestore = readSnapshot(id);
