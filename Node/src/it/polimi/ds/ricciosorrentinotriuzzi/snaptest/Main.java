@@ -9,7 +9,7 @@ import java.util.Scanner;
 
 public class Main {
     public static void main(String[] args) throws Exception {
-        //System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
+        System.setOut(new PrintStream(new FileOutputStream(new File("out.log"))));
         System.err.println("\nStarting server...");
         XMLConfiguration config = new XMLConfiguration("config.xml");
         System.setProperty("java.rmi.server.hostname", config.getString("host"));

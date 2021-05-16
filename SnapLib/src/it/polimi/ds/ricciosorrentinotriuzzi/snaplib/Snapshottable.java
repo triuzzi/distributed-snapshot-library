@@ -129,7 +129,7 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
                         SnapInt snapRemInt = ((SnapInt) LocateRegistry
                                 .getRegistry(connInt.getHost(), connInt.getPort())
                                 .lookup("SnapInt"));
-                        System.out.println("Richiedo lo snapshot a " + connInt.getHost());
+                        System.out.println("Connessione a " + connInt.getHost() + " riuscita. Richiedo lo snapshot");
                         new Thread(() -> {
                             try {
                                 Thread.sleep(sleepSnapshot);
@@ -188,9 +188,8 @@ public abstract class Snapshottable<S extends Serializable, M extends Serializab
         if (!restoring) {
             //Avvio la restore e inizializzo i set di snapshot, rendendoli impossibili
             restoring = true;
-            for (String snap : runningSnapshots.keySet()) {
-                System.out.println("Lo snapshot " + snap + " è stato interrotto");
-            }
+            for(String snap : runningSnapshots.keySet())
+                System.out.println("Lo snapshot " + snap + " è stato cancellato ");
             runningSnapshots = new HashMap<>();
             incomingStatus = new HashMap<>();
             toRestore = readSnapshot(id);
